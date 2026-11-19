@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --glass-bg: rgba(255, 255, 255, 0.90);
+      --glass-bg: rgba(255, 255, 255, 0.92);
       --glass-border: rgba(15, 23, 42, 0.12);
     }
     * { box-sizing: border-box; }
@@ -34,7 +34,7 @@
       backdrop-filter: blur(10px);
       -webkit-backdrop-filter: blur(10px);
       border: 1px solid var(--glass-border);
-      box-shadow: 0 10px 28px rgba(2, 6, 23, 0.20);
+      box-shadow: 0 10px 28px rgba(2, 6, 23, 0.22);
       transform: translateZ(0);
     }
     #globeCanvas {
@@ -48,21 +48,21 @@
       will-change: contents;
     }
     #globeCanvas:active { cursor: grabbing; }
-    /* Eco-Earth Intro Overlay */
+    /* Eco-Earth Botanical Assembly Intro Overlay */
     #ecoIntroOverlay {
       position: fixed;
       inset: 0;
       z-index: 100;
       background: radial-gradient(circle at 50% 48%, #0c1f17 0%, #050d0a 58%, #02060a 100%);
-      transition: opacity 1.15s cubic-bezier(0.22, 1, 0.36, 1), transform 1.15s cubic-bezier(0.22, 1, 0.36, 1);
+      transition: opacity 1.1s cubic-bezier(0.22, 1, 0.36, 1), transform 1.1s cubic-bezier(0.22, 1, 0.36, 1);
       will-change: opacity, transform;
     }
     #ecoIntroOverlay.intro-fade-out {
       opacity: 0;
-      transform: scale(1.06);
+      transform: scale(1.05);
       pointer-events: none;
     }
-    /* MSN-Style AQI Gradient Bar */
+    /* MSN-Style 6-Tier AQI Gradient Scale */
     .aqi-scale-bar {
       background: linear-gradient(90deg, #10b981 0%, #84cc16 20%, #eab308 38%, #f97316 58%, #ef4444 76%, #9333ea 90%, #7f1d1d 100%);
     }
@@ -91,7 +91,7 @@
   </div>
 
   <!-- ======================================================================= -->
-  <!-- FULL-VIEWPORT 3D GOOGLE-MAPS-STYLE EARTH GLOBE CANVAS                   -->
+  <!-- FULL-VIEWPORT 60FPS 3D GOOGLE-MAPS-STYLE EARTH GLOBE CANVAS             -->
   <!-- ======================================================================= -->
   <canvas id="globeCanvas"></canvas>
 
@@ -121,7 +121,7 @@
     <!-- Brand Identity -->
     <div class="glass rounded-2xl px-3.5 py-2 flex items-center gap-2.5 pointer-events-auto order-1">
       <div class="w-8 h-8 rounded-xl bg-slate-900 text-emerald-400 flex items-center justify-center shadow-sm shrink-0">
-        <svg class="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
       </div>
       <div class="leading-tight">
         <div class="flex items-center gap-2">
@@ -133,15 +133,57 @@
     </div>
 
     <!-- Top-Center Google-Maps-Style Interactive Search Bar -->
-    <div class="relative w-full sm:w-[340px] lg:w-[390px] pointer-events-auto order-3 lg:order-2">
+    <div class="relative w-full sm:w-[340px] lg:w-[380px] pointer-events-auto order-3 lg:order-2">
       <div class="glass rounded-2xl px-3 py-1.5 flex items-center gap-2">
         <svg class="w-4 h-4 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
         <input id="globalSearchInput" type="text" autocomplete="off"
-          placeholder="Search wildfire, glacier, country (e.g. Pir Panjal, Gangotri)..."
+          placeholder="Search city, wildfire, drought, or glacier (e.g. Delhi, Tokyo, Amazon)..."
           class="w-full bg-transparent text-xs font-medium text-slate-800 placeholder-slate-400 outline-none py-1"
           oninput="handleSearchInput(this.value)"
           onfocus="handleSearchInput(this.value)"
-    <!-- Top-Right Official Controls: Map Layers, Tour, Hazards, WHO/ICDO Safety, Groups & Gmail Sign-In -->
+          onkeydown="if(event.key==='Enter'){selectFirstSearchResult();}" />
+        <button onclick="document.getElementById('globalSearchInput').value=''; document.getElementById('searchDropdown').classList.add('hidden');" class="text-slate-400 hover:text-slate-700 text-xs font-bold px-1 cursor-pointer" title="Clear">✕</button>
+      </div>
+      <!-- Quick Jump Chips -->
+      <div class="hidden sm:flex items-center gap-1 mt-1.5 overflow-x-auto pb-0.5">
+        <button onclick="quickJump('pir-panjal')" class="px-2.5 py-0.5 rounded-full bg-white/90 hover:bg-slate-900 hover:text-white text-[10px] font-semibold text-slate-700 shadow-sm border border-slate-200 transition cursor-pointer shrink-0">Pir Panjal</button>
+        <button onclick="quickJump('city-delhi')" class="px-2.5 py-0.5 rounded-full bg-white/90 hover:bg-rose-700 hover:text-white text-[10px] font-semibold text-rose-800 shadow-sm border border-rose-200 transition cursor-pointer shrink-0">Delhi AQI</button>
+        <button onclick="quickJump('drought-deccan')" class="px-2.5 py-0.5 rounded-full bg-white/90 hover:bg-amber-700 hover:text-white text-[10px] font-semibold text-amber-900 shadow-sm border border-amber-200 transition cursor-pointer shrink-0">Deccan Drought</button>
+        <button onclick="quickJump('drought-horn')" class="px-2.5 py-0.5 rounded-full bg-white/90 hover:bg-amber-700 hover:text-white text-[10px] font-semibold text-amber-900 shadow-sm border border-amber-200 transition cursor-pointer shrink-0">Horn Drought</button>
+        <button onclick="quickJump('gangotri')" class="px-2.5 py-0.5 rounded-full bg-white/90 hover:bg-sky-700 hover:text-white text-[10px] font-semibold text-sky-900 shadow-sm border border-sky-200 transition cursor-pointer shrink-0">Gangotri</button>
+        <button onclick="quickJump('amazon-para')" class="px-2.5 py-0.5 rounded-full bg-white/90 hover:bg-slate-900 hover:text-white text-[10px] font-semibold text-slate-700 shadow-sm border border-slate-200 transition cursor-pointer shrink-0">Amazon</button>
+      </div>
+      <!-- Search Results Dropdown -->
+      <div id="searchDropdown" class="hidden absolute top-11 left-0 right-0 bg-white rounded-2xl shadow-2xl border border-slate-200 max-h-64 overflow-y-auto z-40"></div>
+    </div>
+
+    <!-- Top-Right Official Controls -->
+    <div class="flex items-center gap-1.5 pointer-events-auto order-2 lg:order-3 flex-wrap justify-end">
+      <div class="glass rounded-xl p-1 flex items-center gap-0.5">
+        <button id="btnStyle" onclick="toggleMapStyle()" class="px-2 py-1.5 rounded-lg text-[11px] font-semibold text-slate-700 hover:bg-slate-100 transition cursor-pointer" title="Switch Google Satellite / Official Map">Map View</button>
+        <button id="btnDayNight" onclick="toggleLayer('dayNight')" class="px-2 py-1.5 rounded-lg text-[11px] font-semibold bg-indigo-900 text-white shadow-sm transition cursor-pointer" title="Toggle Real-Time Day &amp; Night Terminator">Day/Night</button>
+        <button id="btnCities" onclick="toggleLayer('cities')" class="px-2 py-1.5 rounded-lg text-[11px] font-semibold bg-slate-800 text-white shadow-sm transition cursor-pointer" title="Toggle Global Cities &amp; Disaster Cities">Cities</button>
+        <button id="btnDroughts" onclick="toggleLayer('droughts')" class="px-2 py-1.5 rounded-lg text-[11px] font-semibold bg-amber-700 text-white shadow-sm transition cursor-pointer" title="Toggle Global Drought Zones">Droughts</button>
+        <button id="btnAqi" onclick="toggleLayer('aqi')" class="px-2 py-1.5 rounded-lg text-[11px] font-semibold bg-teal-700 text-white shadow-sm transition cursor-pointer" title="Toggle MSN-Style AQI Badges on Globe">AQI</button>
+        <button id="btnWarming" onclick="toggleLayer('warming')" class="px-2 py-1.5 rounded-lg text-[11px] font-semibold bg-red-600 text-white shadow-sm transition cursor-pointer" title="Toggle Global Warming Zones">Warming</button>
+        <button id="btnGlaciers" onclick="toggleLayer('glaciers')" class="px-2 py-1.5 rounded-lg text-[11px] font-semibold bg-sky-700 text-white shadow-sm transition cursor-pointer" title="Toggle Melting Glaciers">Glaciers</button>
+        <button id="btnBiomes" onclick="toggleLayer('biomes')" class="px-2 py-1.5 rounded-lg text-[11px] font-semibold bg-emerald-800 text-white shadow-sm transition cursor-pointer" title="Toggle Land-Clipped Biomes &amp; Rivers">Biomes</button>
+        <button id="btnTour" onclick="toggleJudgeTour()" class="px-2 py-1.5 rounded-lg text-[11px] font-semibold text-slate-700 hover:bg-slate-100 transition cursor-pointer" title="Automated Tour">Tour</button>
+      </div>
+      <!-- Quick Jump Chips -->
+      <div class="hidden sm:flex items-center gap-1 mt-1.5 overflow-x-auto pb-0.5">
+        <button onclick="quickJump('pir-panjal')" class="px-2.5 py-0.5 rounded-full bg-white/90 hover:bg-slate-900 hover:text-white text-[10px] font-semibold text-slate-700 shadow-sm border border-slate-200 transition cursor-pointer shrink-0">Pir Panjal</button>
+        <button onclick="quickJump('bastar')" class="px-2.5 py-0.5 rounded-full bg-white/90 hover:bg-slate-900 hover:text-white text-[10px] font-semibold text-slate-700 shadow-sm border border-slate-200 transition cursor-pointer shrink-0">Bastar</button>
+        <button onclick="quickJump('gangotri')" class="px-2.5 py-0.5 rounded-full bg-white/90 hover:bg-sky-700 hover:text-white text-[10px] font-semibold text-sky-900 shadow-sm border border-sky-200 transition cursor-pointer shrink-0">Gangotri</button>
+        <button onclick="quickJump('siachen')" class="px-2.5 py-0.5 rounded-full bg-white/90 hover:bg-sky-700 hover:text-white text-[10px] font-semibold text-sky-900 shadow-sm border border-sky-200 transition cursor-pointer shrink-0">Siachen</button>
+        <button onclick="quickJump('amazon-para')" class="px-2.5 py-0.5 rounded-full bg-white/90 hover:bg-slate-900 hover:text-white text-[10px] font-semibold text-slate-700 shadow-sm border border-slate-200 transition cursor-pointer shrink-0">Amazon</button>
+        <button onclick="quickJump('california-sierra')" class="px-2.5 py-0.5 rounded-full bg-white/90 hover:bg-slate-900 hover:text-white text-[10px] font-semibold text-slate-700 shadow-sm border border-slate-200 transition cursor-pointer shrink-0">California</button>
+      </div>
+      <!-- Search Results Dropdown -->
+      <div id="searchDropdown" class="hidden absolute top-11 left-0 right-0 bg-white rounded-2xl shadow-2xl border border-slate-200 max-h-64 overflow-y-auto z-40"></div>
+    </div>
+
+    <!-- Top-Right Official Controls -->
     <div class="flex items-center gap-1.5 pointer-events-auto order-2 lg:order-3 flex-wrap justify-end">
       <div class="glass rounded-xl p-1 flex items-center gap-0.5">
         <button id="btnStyle" onclick="toggleMapStyle()" class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-700 hover:bg-slate-100 transition cursor-pointer" title="Switch Google Satellite / Official Map">Map View</button>
@@ -153,29 +195,28 @@
         <button id="btnTour" onclick="toggleJudgeTour()" class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-700 hover:bg-slate-100 transition cursor-pointer" title="Automated Tour">Tour</button>
       </div>
 
-      <!-- Multi-Hazard Prediction Center Button (Flood, Earthquake, Drought) -->
-      <button onclick="openHazardModal()" class="px-3 py-2 rounded-xl text-[11px] font-semibold bg-rose-700 text-white hover:bg-rose-800 shadow-md transition flex items-center gap-1.5 cursor-pointer" title="Sudden Flood, Earthquake &amp; Drought Prediction Center">
+      <!-- Multi-Hazard Prediction Center Button -->
+      <button onclick="openHazardModal()" class="px-2.5 py-2 rounded-xl text-[11px] font-semibold bg-rose-700 text-white hover:bg-rose-800 shadow-md transition flex items-center gap-1.5 cursor-pointer" title="Sudden Flood, Earthquake &amp; Drought Prediction Center">
         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
         <span>Hazards</span>
       </button>
 
       <!-- WHO & ICDO Wildfire Precautions Button -->
-      <button onclick="openSafetyModal()" class="px-3 py-2 rounded-xl text-[11px] font-semibold bg-amber-600 text-white hover:bg-amber-700 shadow-md transition flex items-center gap-1.5 cursor-pointer" title="Official WHO &amp; ICDO Wildfire Precautions">
+      <button onclick="openSafetyModal()" class="px-2.5 py-2 rounded-xl text-[11px] font-semibold bg-amber-600 text-white hover:bg-amber-700 shadow-md transition flex items-center gap-1.5 cursor-pointer" title="Official WHO &amp; ICDO Wildfire Precautions">
         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-        <span class="hidden sm:inline">WHO/ICDO Safety</span>
-        <span class="sm:hidden">Safety</span>
+        <span class="hidden xl:inline">WHO/ICDO Safety</span>
+        <span class="xl:hidden">Safety</span>
       </button>
 
       <!-- Open Right-Side SDG 13 Climate Groups Drawer -->
-      <button onclick="toggleGroupsDrawer(true)" class="px-3 py-2 rounded-xl text-[11px] font-semibold bg-slate-900 text-white hover:bg-slate-800 shadow-md transition flex items-center gap-1.5 cursor-pointer">
+      <button onclick="toggleGroupsDrawer(true)" class="px-2.5 py-2 rounded-xl text-[11px] font-semibold bg-slate-900 text-white hover:bg-slate-800 shadow-md transition flex items-center gap-1.5 cursor-pointer">
         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span>Groups</span>
       </button>
 
-      <!-- Sovereign Nation / Region Selector (Updates Emergency Helplines) -->
-      <div class="glass rounded-xl px-2 py-1 flex items-center gap-1.5 shadow-md" title="Select your sovereign nation for immediate Police &amp; Fire Brigade helplines">
-        <svg class="w-3.5 h-3.5 text-slate-600 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-        <select id="regionSelect" onchange="changeRegion(this.value)" class="bg-transparent text-[11px] font-bold text-slate-800 outline-none cursor-pointer pr-1">
+      <!-- Sovereign Nation / Region Selector -->
+      <div class="glass rounded-xl px-2 py-1.5 flex items-center gap-1 shadow-md" title="Select your sovereign nation for immediate Police &amp; Fire Brigade helplines">
+        <select id="regionSelect" onchange="changeRegion(this.value)" class="bg-transparent text-[11px] font-bold text-slate-800 outline-none cursor-pointer">
           <option value="IN">India</option>
           <option value="US">United States</option>
           <option value="AU">Australia</option>
@@ -202,6 +243,182 @@
   </header>
 
   <!-- ======================================================================= -->
+  <!-- LEFT INSPECTOR DRAWER: GLOBAL WILDFIRE FEED, AQI & GLACIER REPORTS      -->
+  <!-- ======================================================================= -->
+  <button id="btnOpenLeft" onclick="toggleLeftInspector(true)" class="hidden fixed top-[82px] left-3 z-20 glass px-3 py-2 rounded-xl text-xs font-bold text-slate-800 hover:bg-white cursor-pointer">☰ Earth Feed</button>
+
+  <aside id="leftInspector" class="fixed top-[82px] left-3 bottom-[62px] w-[320px] sm:w-[340px] max-w-[calc(100vw-24px)] z-20 glass rounded-2xl flex flex-col overflow-hidden transition-transform duration-300">
+    <div class="px-4 py-3 border-b border-slate-200/80 flex items-center justify-between gap-2 bg-white/60">
+      <div class="min-w-0">
+        <div id="inspectorTitle" class="serif font-bold text-sm text-slate-900 truncate">Global Disasters &amp; Cities</div>
+        <div id="inspectorSubtitle" class="text-[10.5px] text-slate-500 truncate">Select a marker, city dot, or click land</div>
+      </div>
+      <div class="flex items-center gap-1 shrink-0">
+        <button id="btnBackFeed" onclick="resetInspectorToFeed()" class="hidden px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-[10px] font-bold text-slate-700 cursor-pointer">← All</button>
+        <button onclick="toggleLeftInspector(false)" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold flex items-center justify-center cursor-pointer" title="Minimize">−</button>
+      </div>
+    </div>
+    <!-- Feed Filter Tabs -->
+    <div id="inspectorTabs" class="px-2.5 py-2 bg-slate-50/90 border-b border-slate-200/80 grid grid-cols-4 gap-1 text-[10px] font-bold">
+      <button id="ftab-disasters" onclick="switchFeedTab('disasters')" class="py-1.5 rounded-lg bg-slate-900 text-white cursor-pointer">Disasters</button>
+      <button id="ftab-wildfires" onclick="switchFeedTab('wildfires')" class="py-1.5 rounded-lg text-slate-600 hover:bg-slate-200 cursor-pointer">Wildfires</button>
+      <button id="ftab-droughts" onclick="switchFeedTab('droughts')" class="py-1.5 rounded-lg text-slate-600 hover:bg-slate-200 cursor-pointer">Droughts</button>
+      <button id="ftab-cities" onclick="switchFeedTab('cities')" class="py-1.5 rounded-lg text-slate-600 hover:bg-slate-200 cursor-pointer">Cities</button>
+    </div>
+    <div id="inspectorBody" class="flex-1 overflow-y-auto p-3 space-y-2.5"></div>
+  </aside>
+
+  <!-- ======================================================================= -->
+  <!-- RIGHT FLOATING WIND & 6H SPREAD SIMULATOR + GLOBE ZOOM CONTROLS         -->
+  <!-- ======================================================================= -->
+  <div class="fixed right-3 bottom-[64px] z-20 flex flex-col items-end gap-2 pointer-events-none">
+    <div class="glass rounded-2xl p-3 w-[210px] pointer-events-auto hidden md:block">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-[10.5px] font-extrabold text-slate-800">Wind &amp; 6h Spread Cone</span>
+        <span id="windCompassBadge" class="mono text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700">NE • 24 km/h</span>
+      </div>
+      <div class="space-y-1.5 text-[10px]">
+        <div>
+          <div class="flex justify-between text-slate-500 font-semibold"><span>Wind Speed</span><span id="windSpeedVal" class="mono text-slate-800">24 km/h</span></div>
+          <input type="range" min="5" max="90" value="24" oninput="setWindSpeed(this.value)" class="w-full h-1.5 cursor-pointer" />
+        </div>
+        <div>
+          <div class="flex justify-between text-slate-500 font-semibold"><span>Bearing Direction</span><span id="windDirVal" class="mono text-slate-800">45° (NE)</span></div>
+          <input type="range" min="0" max="359" value="45" oninput="setWindDir(this.value)" class="w-full h-1.5 cursor-pointer" />
+        </div>
+      </div>
+    </div>
+
+    <div class="glass rounded-xl p-1 flex items-center gap-1 pointer-events-auto">
+      <button onclick="resetIndiaFocus()" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-emerald-800 text-white text-[10.5px] font-bold cursor-pointer">India</button>
+      <button onclick="zoomGlobe(1.22)" class="w-7 h-7 rounded-lg hover:bg-slate-200 text-slate-800 font-bold text-sm flex items-center justify-center cursor-pointer" title="Zoom In">+</button>
+      <button onclick="zoomGlobe(0.82)" class="w-7 h-7 rounded-lg hover:bg-slate-200 text-slate-800 font-bold text-sm flex items-center justify-center cursor-pointer" title="Zoom Out">−</button>
+    </div>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- BOTTOM-LEFT SOVEREIGN NATION EMERGENCY HELPLINE BAR (POLICE & FIRE)     -->
+  <!-- ======================================================================= -->
+  <div id="helplineBar" class="fixed bottom-3 left-3 z-20 glass rounded-2xl px-3.5 py-2 flex items-center gap-2.5 max-w-[calc(100vw-130px)] sm:max-w-none overflow-x-auto">
+    <span class="w-2 h-2 rounded-full bg-red-600 animate-pulse shrink-0"></span>
+    <span id="hlNationLabel" class="text-[10.5px] font-extrabold text-slate-900 shrink-0">India Emergency:</span>
+    <a id="hlPoliceLink" href="tel:112" class="px-2 py-0.5 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 text-[10.5px] font-bold mono shrink-0">Police: 112 / 100</a>
+    <a id="hlFireLink" href="tel:101" class="px-2 py-0.5 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 text-red-900 text-[10.5px] font-bold mono shrink-0">Fire: 101</a>
+    <a id="hlDisasterLink" href="tel:1078" class="hidden xl:inline-block px-2 py-0.5 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-950 text-[10.5px] font-bold mono shrink-0">Disaster: 1078</a>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- BOTTOM-CENTER 24-HOUR VIIRS ORBITAL TIMELINE SCRUBBER                   -->
+  <!-- ======================================================================= -->
+  <div class="hidden lg:flex fixed bottom-3 left-1/2 -translate-x-1/2 z-20 glass rounded-2xl px-3.5 py-2 items-center gap-3 w-[360px]">
+    <button id="btnPlayTime" onclick="toggleTimelinePlay()" class="w-7 h-7 rounded-full bg-slate-900 hover:bg-emerald-800 text-white text-[10px] font-bold flex items-center justify-center shrink-0 cursor-pointer">▶</button>
+    <div class="flex-1 min-w-0">
+      <div class="flex justify-between text-[10px] font-bold text-slate-700 mb-0.5">
+        <span>24-Hour VIIRS Orbital Scrubber</span>
+        <span id="timelineHourLabel" class="mono text-emerald-800">Live UTC (24:00)</span>
+      </div>
+      <input id="timelineSlider" type="range" min="0" max="24" step="0.5" value="24" oninput="setTimelineHour(parseFloat(this.value))" class="w-full h-1.5 cursor-pointer" />
+    </div>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- RIGHT-SIDE SLIDE-OVER SDG 13 CLIMATE GROUPS DRAWER                      -->
+  <!-- ======================================================================= -->
+  <aside id="groupsDrawer" class="fixed top-3 right-3 bottom-3 w-[380px] max-w-[calc(100vw-24px)] z-40 bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden translate-x-[120%] transition-transform duration-300">
+    <div class="px-5 py-4 bg-slate-900 text-white flex items-center justify-between gap-2">
+      <div>
+        <h3 class="serif font-bold text-base">SDG 13 Climate Groups</h3>
+        <p id="groupsUserStatus" class="text-[10.5px] text-emerald-300">Sign in with Gmail to post &amp; create groups</p>
+      </div>
+      <button onclick="toggleGroupsDrawer(false)" class="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 text-white text-xs font-bold flex items-center justify-center cursor-pointer">✕</button>
+    </div>
+
+    <!-- 4 Group Tabs -->
+    <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 grid grid-cols-4 gap-1 text-[10.5px] font-bold">
+      <button id="gtab-ainews" onclick="switchGroupTab('ainews')" class="py-1.5 rounded-xl bg-slate-900 text-white cursor-pointer">AI News</button>
+      <button id="gtab-world" onclick="switchGroupTab('world')" class="py-1.5 rounded-xl text-slate-600 hover:bg-slate-200 cursor-pointer">World</button>
+      <button id="gtab-ideas" onclick="switchGroupTab('ideas')" class="py-1.5 rounded-xl text-slate-600 hover:bg-slate-200 cursor-pointer">Ideas</button>
+      <button id="gtab-private" onclick="switchGroupTab('private')" class="py-1.5 rounded-xl text-slate-600 hover:bg-slate-200 cursor-pointer">Private</button>
+    </div>
+
+    <!-- TAB 1: AI Global Wildfire Newsroom -->
+    <div id="gpanel-ainews" class="flex-1 flex flex-col overflow-hidden">
+      <div class="px-4 py-2.5 bg-red-50/70 border-b border-red-100 flex items-center justify-between gap-2">
+        <span class="text-[10.5px] font-bold text-red-900">AI Worldwide Wildfire News Scout</span>
+        <button id="btnScanAiNews" onclick="fetchAiWildfireNewsGroup(true)" class="px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold cursor-pointer">Scan Live News</button>
+      </div>
+      <div id="aiNewsList" class="flex-1 overflow-y-auto p-3.5 space-y-2.5 bg-slate-50"></div>
+    </div>
+
+    <!-- TAB 2: World SDG 13 Chat (Bot-Free Empty State) -->
+    <div id="gpanel-world" class="hidden flex-1 flex flex-col overflow-hidden">
+      <div id="worldChatMessages" class="flex-1 overflow-y-auto p-3.5 space-y-2.5 bg-slate-50"></div>
+      <form onsubmit="postWorldMessage(event)" class="p-3 bg-white border-t border-slate-200 flex gap-2">
+        <input id="worldChatInput" type="text" placeholder="Discuss UN SDG 13 Climate Action..." class="flex-1 bg-slate-100 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-slate-900/20" />
+        <button type="submit" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-emerald-800 text-white text-xs font-bold cursor-pointer">Send</button>
+      </form>
+    </div>
+
+    <!-- TAB 3: Climate Ideas & Projects Hub (Bot-Free Empty State) -->
+    <div id="gpanel-ideas" class="hidden flex-1 flex flex-col overflow-hidden">
+      <form onsubmit="postClimateIdea(event)" class="p-3 bg-white border-b border-slate-200 space-y-2">
+        <input id="ideaTitleInput" type="text" required placeholder="Project / Idea title..." class="w-full bg-slate-100 rounded-xl px-3 py-1.5 text-xs outline-none" />
+        <div class="flex gap-2">
+          <select id="ideaCategoryInput" class="bg-slate-100 rounded-xl px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 outline-none">
+            <option>Wildfire Prevention</option>
+            <option>Clean Air / AQI</option>
+            <option>Glacier &amp; Water</option>
+            <option>Renewable Energy</option>
+          </select>
+          <button type="submit" class="flex-1 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold cursor-pointer">Publish Idea</button>
+        </div>
+        <textarea id="ideaDescInput" rows="2" required placeholder="Describe how your solution tackles climate change..." class="w-full bg-slate-100 rounded-xl px-3 py-1.5 text-xs outline-none resize-none"></textarea>
+      </form>
+      <div id="ideasList" class="flex-1 overflow-y-auto p-3.5 space-y-2.5 bg-slate-50"></div>
+    </div>
+
+    <!-- TAB 4: Private Climate Groups (Bot-Free Empty State) -->
+    <div id="gpanel-private" class="hidden flex-1 flex flex-col overflow-hidden">
+      <div id="privateLobby" class="flex-1 overflow-y-auto p-3.5 space-y-3 bg-slate-50">
+        <form onsubmit="createPrivateGroup(event)" class="bg-white border border-slate-200 rounded-2xl p-3 space-y-2">
+          <div class="text-xs font-extrabold text-slate-900">Create a Private Climate Group</div>
+          <div class="flex gap-2">
+            <input id="newGroupNameInput" type="text" required placeholder="Group name (e.g. Eco Warriors)" class="flex-1 bg-slate-100 rounded-xl px-3 py-1.5 text-xs outline-none" />
+            <button type="submit" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-emerald-800 text-white text-xs font-bold cursor-pointer">Create</button>
+          </div>
+        </form>
+        <form onsubmit="joinPrivateGroup(event)" class="bg-white border border-slate-200 rounded-2xl p-3 space-y-2">
+          <div class="text-xs font-extrabold text-slate-900">Join via Invite Code</div>
+          <div class="flex gap-2">
+            <input id="joinGroupCodeInput" type="text" required placeholder="e.g. ECO-4821" class="flex-1 bg-slate-100 rounded-xl px-3 py-1.5 text-xs uppercase mono outline-none" />
+            <button type="submit" class="px-3 py-1.5 rounded-xl bg-[#1a73e8] hover:bg-blue-700 text-white text-xs font-bold cursor-pointer">Join</button>
+          </div>
+        </form>
+        <div id="myPrivateGroupsList" class="space-y-2"></div>
+      </div>
+
+      <!-- Active Private Room View -->
+      <div id="privateRoomView" class="hidden flex-1 flex flex-col overflow-hidden">
+        <div class="px-3.5 py-2.5 bg-white border-b border-slate-200 flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <div id="activePrivName" class="text-xs font-extrabold text-slate-900 truncate"></div>
+            <div class="flex items-center gap-1.5">
+              <span id="activePrivCode" class="mono text-[10px] font-bold text-emerald-700"></span>
+              <button onclick="copyActiveGroupCode()" class="text-[10px] font-bold text-[#1a73e8] hover:underline cursor-pointer">Copy Code</button>
+            </div>
+          </div>
+          <button onclick="leavePrivateRoomView()" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-[10px] font-bold text-slate-700 cursor-pointer">← Rooms</button>
+        </div>
+        <div id="privateChatMessages" class="flex-1 overflow-y-auto p-3.5 space-y-2 bg-slate-50"></div>
+        <form onsubmit="postPrivateMessage(event)" class="p-3 bg-white border-t border-slate-200 flex gap-2">
+          <input id="privateChatInput" type="text" placeholder="Message private group..." class="flex-1 bg-slate-100 rounded-xl px-3 py-2 text-xs outline-none" />
+          <button type="submit" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-emerald-800 text-white text-xs font-bold cursor-pointer">Send</button>
+        </form>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ======================================================================= -->
   <!-- MULTI-HAZARD EARLY WARNING & PREDICTION WINDOW (FLOOD, QUAKE, DROUGHT)  -->
   <!-- ======================================================================= -->
   <div id="hazardModal" class="hidden fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-sm flex items-center justify-center p-4">
@@ -216,8 +433,6 @@
         </div>
         <button onclick="closeHazardModal()" class="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 text-white font-bold text-xs flex items-center justify-center cursor-pointer">✕</button>
       </div>
-
-      <!-- Hazard Category Filter Bar -->
       <div class="px-6 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2 flex-wrap">
         <div class="flex items-center gap-1.5 flex-wrap">
           <button id="htab-all" onclick="switchHazardTab('all')" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white cursor-pointer">All Hazards</button>
@@ -227,11 +442,7 @@
         </div>
         <button onclick="fetchLiveUsgsEarthquakes(true)" class="px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-bold cursor-pointer">Refresh Live Feeds</button>
       </div>
-
-      <!-- Summary Counters -->
       <div id="hazardSummaryStrip" class="px-6 py-2.5 bg-white border-b border-slate-100 grid grid-cols-3 gap-2.5 text-center"></div>
-
-      <!-- Hazard Cards List -->
       <div id="hazardListBody" class="flex-1 overflow-y-auto p-5 space-y-3 bg-slate-50"></div>
     </div>
   </div>
@@ -248,16 +459,12 @@
         </div>
         <button onclick="closeSafetyModal()" class="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 text-white font-bold text-xs flex items-center justify-center cursor-pointer">✕</button>
       </div>
-
-      <!-- Modal Tabs -->
       <div class="px-6 pt-3 pb-2 bg-slate-50 border-b border-slate-200 flex gap-2 overflow-x-auto">
         <button id="stab-who" onclick="switchSafetyTab('who')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#1a73e8] text-white cursor-pointer shrink-0">WHO Health &amp; Smoke</button>
         <button id="stab-icdo" onclick="switchSafetyTab('icdo')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-200 text-slate-700 hover:bg-slate-300 cursor-pointer shrink-0">ICDO Civil Defence</button>
         <button id="stab-agencies" onclick="switchSafetyTab('agencies')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-200 text-slate-700 hover:bg-slate-300 cursor-pointer shrink-0">Global Data Agencies</button>
       </div>
-
       <div class="p-6 overflow-y-auto space-y-4 text-xs text-slate-700 leading-relaxed">
-        <!-- WHO Panel -->
         <div id="spanel-who" class="space-y-3">
           <div class="bg-blue-50 border border-blue-200 rounded-2xl p-3.5">
             <div class="font-extrabold text-blue-950 text-sm mb-1">World Health Organization (WHO) — Wildfire Smoke &amp; Health Protection</div>
@@ -266,59 +473,55 @@
           <div class="grid sm:grid-cols-2 gap-3">
             <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
               <div class="font-bold text-slate-900 mb-1">1. Respiratory Protection (N95 / FFP2)</div>
-              <p>If you must go outdoors in smoky air, wear a well-fitted <strong>N95, KN95, or FFP2 respirator</strong>. Standard cloth or surgical masks do not filter PM2.5 smoke particles.</p>
+              <p>Wear a well-fitted <strong>N95, KN95, or FFP2 respirator</strong> outdoors. Standard cloth or surgical masks do not filter PM2.5 smoke particles.</p>
             </div>
             <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
-              <div class="font-bold text-slate-900 mb-1">2. Create an Indoor Clean-Air Room</div>
-              <p>Keep all windows, doors, and vents tightly closed. Run an air conditioner on <strong>recirculate mode</strong> or use a portable HEPA air purifier. Avoid burning candles or frying food indoors.</p>
+              <div class="font-bold text-slate-900 mb-1">2. Indoor Clean-Air Room</div>
+              <p>Seal all windows and doors. Run AC on <strong>recirculate mode</strong> or a portable HEPA purifier. Avoid burning candles or frying food indoors.</p>
             </div>
             <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
               <div class="font-bold text-slate-900 mb-1">3. Protect Vulnerable Groups</div>
-              <p>Children, older adults, pregnant individuals, and people with asthma, COPD, or heart disease should stay indoors, keep rescue inhalers accessible, and seek medical care if chest tightness or wheezing occurs.</p>
+              <p>Children, older adults, pregnant individuals, and people with asthma or heart disease should stay indoors and keep rescue inhalers accessible.</p>
             </div>
             <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
               <div class="font-bold text-slate-900 mb-1">4. Hydration &amp; Safe Re-Entry</div>
-              <p>Drink plenty of clean water to soothe irritated airways. After a fire passes, wet down ash before sweeping and wear gloves, goggles, and a respirator during cleanup.</p>
+              <p>Drink plenty of clean water. After a fire passes, wet down ash before sweeping and wear gloves, goggles, and a respirator during cleanup.</p>
             </div>
           </div>
         </div>
-
-        <!-- ICDO Panel -->
         <div id="spanel-icdo" class="hidden space-y-3">
           <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3.5">
             <div class="font-extrabold text-amber-950 text-sm mb-1">International Civil Defence Organisation (ICDO) — Emergency Response &amp; Evacuation</div>
-            <p class="text-amber-900/90">When a wildfire starts nearby, rapid civil-defence discipline saves lives. Never wait until flames are visible to prepare evacuation.</p>
+            <p class="text-amber-900/90">Never wait until flames are visible to prepare evacuation. Follow civil-defence discipline early.</p>
           </div>
           <div class="grid sm:grid-cols-2 gap-3">
             <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
               <div class="font-bold text-slate-900 mb-1">1. Immediate Evacuation Readiness</div>
-              <p>Follow official civil-defence evacuation orders immediately. Park your vehicle facing outward with windows closed, fuel tank full, and keep two alternate escape routes mapped.</p>
+              <p>Follow official evacuation orders immediately. Park vehicles facing outward with windows closed and keep two alternate escape routes mapped.</p>
             </div>
             <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
-              <div class="font-bold text-slate-900 mb-1">2. Shut Off Utilities &amp; Flammable Fuels</div>
-              <p>Turn off natural gas, LPG cylinders, and propane mains before leaving. Move flammable furniture away from windows and clear dry leaves within 10 meters of your home.</p>
+              <div class="font-bold text-slate-900 mb-1">2. Shut Off Utilities &amp; Fuels</div>
+              <p>Turn off natural gas, LPG cylinders, and propane mains before leaving. Clear dry leaves within 10 meters of your home.</p>
             </div>
             <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
               <div class="font-bold text-slate-900 mb-1">3. ICDO Emergency Go-Bag</div>
-              <p>Pack drinking water (3L/person), IDs &amp; medical prescriptions, N95 masks, flashlight, power bank, battery radio, cotton/wool long-sleeve clothing, and sturdy closed shoes.</p>
+              <p>Pack water (3L/person), IDs, prescriptions, N95 masks, flashlight, power bank, battery radio, and cotton/wool long-sleeve clothing.</p>
             </div>
             <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5">
               <div class="font-bold text-slate-900 mb-1">4. If Trapped by Approaching Fire</div>
-              <p>Do not try to outrun flames uphill. Shelter inside a solid brick/concrete building or a cleared, fuel-free area near water; stay low to the floor where air is cooler and cleaner, and call local emergency services.</p>
+              <p>Do not outrun flames uphill. Shelter inside a solid brick/concrete structure or cleared area near water; stay low to the floor and call emergency services.</p>
             </div>
           </div>
         </div>
-
-        <!-- Agencies Panel -->
         <div id="spanel-agencies" class="hidden space-y-2.5">
           <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5">
             <div class="font-extrabold text-emerald-950 text-sm mb-1">Integrated Global Wildfire &amp; Climate Intelligence Network</div>
-            <p class="text-emerald-900">AgniNet synthesizes satellite thermal detections with real-time international agency bulletins and country-level news reports:</p>
+            <p class="text-emerald-900">AgniNet synthesizes satellite thermal detections with international agency bulletins and country-level news reports:</p>
           </div>
           <ul class="space-y-2">
-            <li class="p-3 rounded-xl bg-slate-50 border border-slate-200"><strong>Global Fire Management Hub (GFMH — FAO/UNEP):</strong> Integrated fire management knowledge, community preparedness, and global wildfire risk frameworks.</li>
+            <li class="p-3 rounded-xl bg-slate-50 border border-slate-200"><strong>Global Fire Management Hub (GFMH — FAO/UNEP):</strong> Integrated fire management knowledge and global wildfire risk frameworks.</li>
             <li class="p-3 rounded-xl bg-slate-50 border border-slate-200"><strong>World Meteorological Organization (WMO):</strong> Global fire-weather indices, drought/heatwave advisories, and wind-driven smoke transport alerts.</li>
-            <li class="p-3 rounded-xl bg-slate-50 border border-slate-200"><strong>Global Fire Monitoring Center (GFMC):</strong> Real-time global wildland fire monitoring, regional fire bulletins, and early warning networks.</li>
+            <li class="p-3 rounded-xl bg-slate-50 border border-slate-200"><strong>Global Fire Monitoring Center (GFMC):</strong> Real-time global wildland fire monitoring and early warning networks.</li>
             <li class="p-3 rounded-xl bg-slate-50 border border-slate-200"><strong>International Civil Defence Organisation (ICDO):</strong> Civil protection coordination, evacuation alerts, and emergency field safety protocols.</li>
             <li class="p-3 rounded-xl bg-slate-50 border border-slate-200"><strong>World Health Organization (WHO):</strong> Smoke PM2.5 health advisories, respiratory protection, and public health emergency guidance.</li>
           </ul>
@@ -342,9 +545,7 @@
         </div>
         <button onclick="closeFireNewsModal()" class="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 text-white font-bold text-xs flex items-center justify-center cursor-pointer shrink-0">✕</button>
       </div>
-
       <div class="p-5 overflow-y-auto space-y-4">
-        <!-- Real-Life Wildfire Documentary Visual -->
         <div class="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 min-h-[220px] flex items-center justify-center">
           <div id="fnPhotoLoader" class="flex flex-col items-center justify-center gap-2.5 p-8 text-center">
             <div class="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin"></div>
@@ -353,11 +554,7 @@
           <img id="fnPhotoImg" alt="Wildfire field scene" class="hidden w-full max-h-[290px] object-cover" />
           <div id="fnPhotoCaption" class="hidden absolute bottom-0 inset-x-0 bg-gradient-to-t from-slate-950/90 via-slate-950/55 to-transparent px-4 py-2.5 text-[10.5px] text-slate-100 font-medium"></div>
         </div>
-
-        <!-- Telemetry & Severity Strip -->
         <div id="fnStatsStrip" class="grid grid-cols-3 gap-2 text-center"></div>
-
-        <!-- Live News Coverage & Ground Impact -->
         <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2.5">
           <div class="flex items-center justify-between gap-2">
             <span class="text-xs font-extrabold text-slate-900">Live News &amp; Ground Impact Report</span>
@@ -373,9 +570,8 @@
   <!-- ======================================================================= -->
   <!-- BOTTOM-RIGHT FLOATING AI CLIMATE CHANGE CHATBOT                         -->
   <!-- ======================================================================= -->
-  <div class="fixed bottom-3.5 right-3.5 z-30 flex flex-col items-end gap-2">
-    <!-- Expandable Chat Window -->
-    <div id="aiChatWindow" class="hidden w-[340px] sm:w-[375px] max-w-[calc(100vw-28px)] h-[440px] max-h-[70vh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
+  <div class="fixed bottom-3 right-3 z-30 flex flex-col items-end gap-2">
+    <div id="aiChatWindow" class="hidden w-[340px] sm:w-[375px] max-w-[calc(100vw-24px)] h-[440px] max-h-[70vh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
       <div class="px-4 py-3 bg-slate-900 text-white flex items-center justify-between gap-2">
         <div class="flex items-center gap-2.5 min-w-0">
           <div class="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 flex items-center justify-center shrink-0">
@@ -388,12 +584,10 @@
         </div>
         <button onclick="toggleAiChatbot(false)" class="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center justify-center cursor-pointer">✕</button>
       </div>
-
-      <!-- Messages -->
       <div id="aiChatMessages" class="flex-1 overflow-y-auto p-3.5 space-y-2.5 bg-slate-50 text-xs">
         <div class="bg-white border border-slate-200 rounded-2xl rounded-bl-sm p-3 text-slate-700 leading-relaxed shadow-sm">
           <div class="font-bold text-slate-900 mb-1">Ask me anything about Climate Change &amp; Wildfires</div>
-          I can explain real-time wildfire alerts (GFMH, WMO, GFMC, ICDO, WHO), glacier melt, global warming zones, or WHO/ICDO safety steps.
+          I can explain real-time wildfire alerts (GFMH, WMO, GFMC, ICDO, WHO), AQI forecasts, glacier melt, or WHO/ICDO safety steps.
           <div class="flex flex-wrap gap-1.5 mt-2">
             <button onclick="askQuickClimateQuestion('What precautions do WHO and ICDO recommend when a wildfire starts?')" class="px-2 py-1 rounded-lg bg-slate-100 hover:bg-emerald-50 hover:text-emerald-900 text-[10px] font-semibold text-slate-700 cursor-pointer">WHO/ICDO Safety</button>
             <button onclick="askQuickClimateQuestion('Which countries have active wildfires right now?')" class="px-2 py-1 rounded-lg bg-slate-100 hover:bg-emerald-50 hover:text-emerald-900 text-[10px] font-semibold text-slate-700 cursor-pointer">Present Wildfires</button>
@@ -401,15 +595,11 @@
           </div>
         </div>
       </div>
-
-      <!-- Input -->
       <form onsubmit="sendAiClimateMessage(event)" class="p-2.5 bg-white border-t border-slate-200 flex gap-2">
         <input id="aiChatInput" type="text" placeholder="Ask about climate change, fires, safety..." class="flex-1 bg-slate-100 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-emerald-700/30" />
         <button id="aiChatSendBtn" type="submit" class="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold cursor-pointer">Ask</button>
       </form>
     </div>
-
-    <!-- Floating Toggle Button -->
     <button onclick="toggleAiChatbot()" class="px-4 py-2.5 rounded-full bg-slate-900 hover:bg-emerald-900 text-white shadow-2xl border border-white/15 flex items-center gap-2 transition cursor-pointer">
       <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
       <span class="text-xs font-bold tracking-tight">Climate AI</span>
@@ -428,13 +618,11 @@
         </div>
         <button onclick="closeAuthModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer">✕</button>
       </div>
-
       <div id="authSignedInBox" class="hidden bg-emerald-50 border border-emerald-200 rounded-2xl p-4 space-y-2.5">
         <div class="text-xs font-bold text-emerald-950" id="authCurrentName"></div>
         <div class="text-[11px] text-emerald-800 mono" id="authCurrentEmail"></div>
         <button onclick="signOutGmail()" class="w-full py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold cursor-pointer">Sign Out</button>
       </div>
-
       <form id="authForm" onsubmit="handleGmailSignIn(event)" class="space-y-3">
         <div>
           <label class="block text-[11px] font-bold text-slate-700 mb-1">Display Name</label>
@@ -456,13 +644,13 @@
 
   <script>
     // =========================================================================
-    // 1. MULTI-AGENCY WILDFIRE DATASET (DUAL-BAND °C + MSN-STYLE AQI)
+    // 1. MULTI-AGENCY WILDFIRE & GLACIER DATASETS (DUAL-BAND °C + MSN AQI)
     // =========================================================================
     const wildfires = [
       {
         id: "pir-panjal", type: "fire", source: "NASA VIIRS • GFMC • FSI",
         name: "Pir Panjal Range, J&K, India", shortName: "Pir Panjal",
-        lat: 33.65, lon: 74.65, fireC: 73.4, ambientC: 16.2, frp: 24.8, c_size: 4, hour: 3.5,
+        lat: 33.65, lon: 74.65, fireC: 73.4, ambientC: 16.2, frp: 24.8, hour: 3.5,
         aqi: 142, pm25: 52.4, pm10: 78.0,
         biome: "Himalayan Montane Evergreen Forest", risk: "CRITICAL",
         lastCaught: "Today 03:30 UTC", containmentPct: 74, responseMins: 26,
@@ -472,7 +660,7 @@
       {
         id: "bastar", type: "fire", source: "NASA VIIRS • GFMH • FSI",
         name: "Bastar Forest, Chhattisgarh, India", shortName: "Bastar",
-        lat: 19.12, lon: 81.95, fireC: 85.8, ambientC: 31.2, frp: 42.1, c_size: 6, hour: 6.0,
+        lat: 19.12, lon: 81.95, fireC: 85.8, ambientC: 31.2, frp: 42.1, hour: 6.0,
         aqi: 186, pm25: 122.8, pm10: 164.5,
         biome: "Tropical Moist Deciduous Forest", risk: "CRITICAL",
         lastCaught: "Today 06:00 UTC", containmentPct: 68, responseMins: 22,
@@ -482,7 +670,7 @@
       {
         id: "garhwal", type: "fire", source: "NASA VIIRS • WMO • FSI",
         name: "Garhwal Himalayas, Uttarakhand, India", shortName: "Garhwal",
-        lat: 30.38, lon: 78.78, fireC: 75.1, ambientC: 19.4, frp: 28.4, c_size: 5, hour: 4.5,
+        lat: 30.38, lon: 78.78, fireC: 75.1, ambientC: 19.4, frp: 28.4, hour: 4.5,
         aqi: 158, pm25: 68.9, pm10: 98.2,
         biome: "Sub-Alpine Evergreen Pine Forest", risk: "CRITICAL",
         lastCaught: "Today 04:30 UTC", containmentPct: 81, responseMins: 19,
@@ -492,7 +680,7 @@
       {
         id: "similipal", type: "fire", source: "NASA VIIRS • GFMC • FSI",
         name: "Similipal Biosphere, Odisha, India", shortName: "Similipal",
-        lat: 21.75, lon: 86.32, fireC: 78.1, ambientC: 29.8, frp: 33.6, c_size: 5, hour: 7.5,
+        lat: 21.75, lon: 86.32, fireC: 78.1, ambientC: 29.8, frp: 33.6, hour: 7.5,
         aqi: 164, pm25: 81.2, pm10: 112.4,
         biome: "Tropical Semi-Evergreen Forest", risk: "CRITICAL",
         lastCaught: "Today 07:30 UTC", containmentPct: 84, responseMins: 18,
@@ -502,7 +690,7 @@
       {
         id: "bandipur", type: "fire", source: "NASA VIIRS • GFMH",
         name: "Bandipur Reserve, Karnataka, India", shortName: "Bandipur",
-        lat: 11.66, lon: 76.63, fireC: 71.9, ambientC: 23.7, frp: 21.5, c_size: 3, hour: 9.0,
+        lat: 11.66, lon: 76.63, fireC: 71.9, ambientC: 23.7, frp: 21.5, hour: 9.0,
         aqi: 94, pm25: 32.6, pm10: 54.1,
         biome: "Western Ghats Tropical Forest", risk: "MODERATE",
         lastCaught: "Today 09:00 UTC", containmentPct: 89, responseMins: 15,
@@ -512,7 +700,7 @@
       {
         id: "namdapha", type: "fire", source: "NASA VIIRS • ICDO • FSI",
         name: "Namdapha National Park, Arunachal Pradesh", shortName: "Namdapha",
-        lat: 27.49, lon: 96.38, fireC: 74.2, ambientC: 20.1, frp: 26.0, c_size: 4, hour: 5.5,
+        lat: 27.49, lon: 96.38, fireC: 74.2, ambientC: 20.1, frp: 26.0, hour: 5.5,
         aqi: 118, pm25: 42.5, pm10: 66.0,
         biome: "Eastern Himalayan Evergreen Forest", risk: "CRITICAL",
         lastCaught: "Today 05:30 UTC", containmentPct: 72, responseMins: 31,
@@ -522,7 +710,7 @@
       {
         id: "amazon-para", type: "fire", source: "GFMH • WMO • INPE",
         name: "Pará Basin, Amazon, Brazil", shortName: "Amazon Basin",
-        lat: -6.45, lon: -54.82, fireC: 83.6, ambientC: 30.8, frp: 48.2, c_size: 7, hour: 11.0,
+        lat: -6.45, lon: -54.82, fireC: 83.6, ambientC: 30.8, frp: 48.2, hour: 11.0,
         aqi: 212, pm25: 162.4, pm10: 215.0,
         biome: "Amazon Tropical Rainforest", risk: "CRITICAL",
         lastCaught: "Today 11:00 UTC", containmentPct: 54, responseMins: 38,
@@ -532,7 +720,7 @@
       {
         id: "california-sierra", type: "fire", source: "GFMC • WMO • CAL FIRE",
         name: "Sierra Nevada Foothills, California, USA", shortName: "California",
-        lat: 37.85, lon: -119.85, fireC: 81.4, ambientC: 24.5, frp: 44.7, c_size: 6, hour: 13.5,
+        lat: 37.85, lon: -119.85, fireC: 81.4, ambientC: 24.5, frp: 44.7, hour: 13.5,
         aqi: 176, pm25: 104.2, pm10: 142.8,
         biome: "Mediterranean Chaparral & Conifer", risk: "CRITICAL",
         lastCaught: "Today 13:30 UTC", containmentPct: 65, responseMins: 14,
@@ -542,7 +730,7 @@
       {
         id: "australia-nsw", type: "fire", source: "GFMH • WMO • NSW RFS",
         name: "Blue Mountains, NSW, Australia", shortName: "NSW Australia",
-        lat: -33.72, lon: 150.31, fireC: 79.2, ambientC: 29.1, frp: 39.5, c_size: 5, hour: 8.5,
+        lat: -33.72, lon: 150.31, fireC: 79.2, ambientC: 29.1, frp: 39.5, hour: 8.5,
         aqi: 154, pm25: 61.5, pm10: 94.0,
         biome: "Eucalyptus Temperate Forest", risk: "CRITICAL",
         lastCaught: "Today 08:30 UTC", containmentPct: 77, responseMins: 16,
@@ -552,16 +740,250 @@
       {
         id: "siberia-yakutia", type: "fire", source: "WMO • GFMC • WHO",
         name: "Yakutia Boreal Taiga, Siberia, Russia", shortName: "Siberia Taiga",
-        lat: 62.55, lon: 129.75, fireC: 72.8, ambientC: 17.6, frp: 36.2, c_size: 6, hour: 10.0,
+        lat: 62.55, lon: 129.75, fireC: 72.8, ambientC: 17.6, frp: 36.2, hour: 10.0,
         aqi: 136, pm25: 49.8, pm10: 76.2,
         biome: "Siberian Boreal Taiga", risk: "MODERATE",
         lastCaught: "Today 10:00 UTC", containmentPct: 58, responseMins: 45,
         managementGrade: "Remote Monitoring (C+)",
         managementNotes: "Arctic heat amplification dried permafrost peatlands; smoke plume advisories issued with WHO PM2.5 respiratory guidance."
+      },
+      {
+        id: "canada-alberta", type: "fire", source: "GFMC • WMO • CIFFC",
+        name: "Boreal Forest Front, Alberta, Canada", shortName: "Alberta Canada",
+        lat: 56.72, lon: -111.38, fireC: 77.6, ambientC: 15.8, frp: 41.4, hour: 12.0,
+        aqi: 162, pm25: 76.5, pm10: 108.0,
+        biome: "North American Boreal Forest", risk: "CRITICAL",
+        lastCaught: "Today 12:00 UTC", containmentPct: 61, responseMins: 24,
+        managementGrade: "Aerial Suppression (B)",
+        managementNotes: "Dry lightning strikes ignited deep boreal spruce stands; water bombers and inter-provincial crews protecting northern corridors."
+      },
+      {
+        id: "greece-evros", type: "fire", source: "GFMH • ICDO • EFFIS",
+        name: "Evros & Attica Forest, Greece", shortName: "Evros Greece",
+        lat: 41.12, lon: 26.15, fireC: 80.5, ambientC: 28.4, frp: 37.9, hour: 9.5,
+        aqi: 151, pm25: 57.2, pm10: 88.6,
+        biome: "Mediterranean Pine & Maquis", risk: "CRITICAL",
+        lastCaught: "Today 09:30 UTC", containmentPct: 70, responseMins: 17,
+        managementGrade: "EU Civil Protection (B+)",
+        managementNotes: "Strong Aegean gusts fanned hillside flames; Canadair amphibious tankers and 112 evacuation messages cleared nearby settlements."
+      },
+      {
+        id: "congo-savanna", type: "fire", source: "GFMH • NASA VIIRS",
+        name: "Central African Savanna Belt, DR Congo", shortName: "Congo Basin",
+        lat: -4.85, lon: 22.40, fireC: 76.4, ambientC: 29.2, frp: 31.8, hour: 10.5,
+        aqi: 144, pm25: 53.6, pm10: 81.0,
+        biome: "Tropical Savanna & Forest Edge", risk: "MODERATE",
+        lastCaught: "Today 10:30 UTC", containmentPct: 52, responseMins: 42,
+        managementGrade: "Community Alerts (C+)",
+        managementNotes: "Dry-season savanna burning encroaching on tropical rainforest margins; regional satellite monitoring tracks smoke plumes."
+      },
+      {
+        id: "chile-valparaiso", type: "fire", source: "WMO • ICDO • CONAF",
+        name: "Valparaíso Coastal Hills, Chile", shortName: "Valparaíso Chile",
+        lat: -33.05, lon: -71.55, fireC: 79.8, ambientC: 26.5, frp: 38.6, hour: 14.0,
+        aqi: 169, pm25: 90.4, pm10: 129.0,
+        biome: "Mediterranean Coastal Scrub", risk: "CRITICAL",
+        lastCaught: "Today 14:00 UTC", containmentPct: 66, responseMins: 18,
+        managementGrade: "Rapid Mobilization (B)",
+        managementNotes: "Coastal canyon winds pushed flames toward urban-wildland terraces; SENAPRED evacuation sirens and air tankers deployed."
       }
     ];
 
-    // MSN-Forecast-Style US AQI Helper (6-tier official color & health scale)
+    // Global Drought Zones (Marked & Labeled on Globe)
+    const droughts = [
+      {
+        id: "drought-deccan", type: "drought",
+        name: "Deccan & Marathwada Drought Belt, India", shortName: "Deccan Drought",
+        lat: 19.25, lon: 76.45, tempC: 36.4, aqi: 112, pm25: 40.2, pm10: 68.5,
+        deficit: "-38% Rain", severity: "SEVERE", status: "Seasonal Soil-Moisture Deficit",
+        agency: "IMD • WMO",
+        detail: "Prolonged rainfall deficit and +2.4°C daytime anomalies have lowered shallow groundwater and reservoir levels across central peninsular India.",
+        action: "Prioritize drip irrigation, reservoir water budgeting, and midday heat-stress protection."
+      },
+      {
+        id: "drought-horn", type: "drought",
+        name: "Horn of Africa Drought Basin", shortName: "Horn of Africa",
+        lat: 4.50, lon: 44.20, tempC: 37.8, aqi: 98, pm25: 34.0, pm10: 62.0,
+        deficit: "-52% Rain", severity: "CRITICAL", status: "Multi-Season Aridity Crisis",
+        agency: "WMO • FAO • GFMH",
+        detail: "Consecutive failed rainy seasons across Somalia, southern Ethiopia, and northern Kenya have severely depleted pastures and river basins.",
+        action: "Coordinate emergency potable water delivery and drought-resilient crop support."
+      },
+      {
+        id: "drought-amazon", type: "drought",
+        name: "Amazon Hydrological Drought, Brazil", shortName: "Amazon Drought",
+        lat: -5.20, lon: -62.40, tempC: 37.2, aqi: 188, pm25: 128.4, pm10: 174.0,
+        deficit: "-46% Flow", severity: "CRITICAL", status: "Historic Low Tributary Levels",
+        agency: "WMO • CEMADEN",
+        detail: "Record-low water levels in the Rio Negro and Madeira rivers are isolating riverine towns and drying rainforest understory fuels.",
+        action: "Prohibit agricultural clearing burns and secure clean drinking water reserves."
+      },
+      {
+        id: "drought-colorado", type: "drought",
+        name: "Colorado River Basin Megadrought, USA", shortName: "SW US Drought",
+        lat: 36.20, lon: -111.80, tempC: 31.5, aqi: 74, pm25: 22.8, pm10: 46.0,
+        deficit: "-34% Snowpack", severity: "SEVERE", status: "Long-Term Aridification",
+        agency: "NOAA • USDM • WMO",
+        detail: "Warming-driven snowpack loss across the Rocky Mountains and elevated evaporation continue straining major basin reservoirs.",
+        action: "Enforce basin water-allocation conservation and urban drought-tolerant landscaping."
+      },
+      {
+        id: "drought-iberian", type: "drought",
+        name: "Iberian & Maghreb Drought Belt, Europe/Africa", shortName: "Iberian Drought",
+        lat: 38.20, lon: -4.50, tempC: 29.4, aqi: 68, pm25: 20.1, pm10: 38.4,
+        deficit: "-41% Storage", severity: "SEVERE", status: "Persistent Agricultural Deficit",
+        agency: "WMO • Copernicus EDO",
+        detail: "Recurring Mediterranean heat domes across southern Spain, Portugal, and Morocco have strained irrigation reservoirs and raised wildfire indices.",
+        action: "Implement agricultural water quotas, desalination buffering, and brushland fuel clearance."
+      },
+      {
+        id: "drought-safrica", type: "drought",
+        name: "Southern Africa Dry Emergency Basin", shortName: "Southern Africa",
+        lat: -18.80, lon: 26.50, tempC: 35.6, aqi: 86, pm25: 28.4, pm10: 54.0,
+        deficit: "-48% Crop Rain", severity: "CRITICAL", status: "El Niño Dry Emergency",
+        agency: "WMO • SADC • WHO",
+        detail: "Severe mid-season dry spells across Zimbabwe, Zambia, and Botswana have impacted staple harvests and Zambezi hydropower capacity.",
+        action: "Support community boreholes, food-security reserves, and heat-safety advisories."
+      },
+      {
+        id: "drought-murray", type: "drought",
+        name: "Murray–Darling Dry Corridor, Australia", shortName: "Murray-Darling",
+        lat: -32.40, lon: 144.80, tempC: 33.8, aqi: 64, pm25: 18.6, pm10: 39.2,
+        deficit: "-31% Inflow", severity: "MODERATE", status: "Dry-Cycle Watch",
+        agency: "BoM • WMO",
+        detail: "Elevated evapotranspiration and dry interior winds are accelerating pasture curing and heightening seasonal bushfire preparedness.",
+        action: "Follow regional water-sharing plans and clear rural property firebreaks."
+      }
+    ];
+
+    // Global & Indian Cities:
+    // - Cities with `disaster !== null` are MARKED & LABELED on the 3D globe.
+    // - Normal cities (`disaster === null`) are shown as clean AQI-colored dots WITHOUT text labels (hover/click for Temp & AQI).
+    const worldCities = [
+      // --- CITIES FACING ACTIVE DISASTER (MARKED + LABELED ON GLOBE) ---
+      {
+        id: "city-delhi", type: "city", name: "New Delhi, India", shortName: "New Delhi", country: "India",
+        lat: 28.61, lon: 77.21, tempC: 24.5, aqi: 318, pm25: 242.0, pm10: 365.0,
+        disaster: { type: "SMOG / AQI CRISIS", shortTag: "SMOG", severity: "CRITICAL", summary: "Hazardous winter air quality emergency driven by shallow inversion layers and regional smoke plumes.", action: "WHO: Stay indoors with HEPA filtration; wear fitted N95/FFP2 masks outside." }
+      },
+      {
+        id: "city-guwahati", type: "city", name: "Guwahati, Assam, India", shortName: "Guwahati", country: "India",
+        lat: 26.14, lon: 91.74, tempC: 23.8, aqi: 96, pm25: 33.4, pm10: 58.0,
+        disaster: { type: "FLASH FLOOD WATCH", shortTag: "FLOOD", severity: "HIGH", summary: "Elevated Brahmaputra inflow and heavy foothill rain creating sudden urban and riverbank flood risk.", action: "ICDO: Move essentials to higher floors and avoid submerged roads." }
+      },
+      {
+        id: "city-lahore", type: "city", name: "Lahore, Pakistan", shortName: "Lahore", country: "Pakistan",
+        lat: 31.52, lon: 74.35, tempC: 23.2, aqi: 294, pm25: 218.5, pm10: 328.0,
+        disaster: { type: "EXTREME AQI", shortTag: "SMOG", severity: "CRITICAL", summary: "Severe particulate pollution trapped across the plains with visibility and respiratory alerts.", action: "WHO: Limit outdoor exertion and seal windows during peak haze." }
+      },
+      {
+        id: "city-losangeles", type: "city", name: "Los Angeles, USA", shortName: "Los Angeles", country: "USA",
+        lat: 34.05, lon: -118.24, tempC: 27.4, aqi: 168, pm25: 88.2, pm10: 124.0,
+        disaster: { type: "WILDFIRE SMOKE", shortTag: "FIRE", severity: "HIGH", summary: "Dry canyon winds elevating brushfire danger and pushing regional PM2.5 smoke into metro valleys.", action: "Keep ICDO Go-Bag packed and monitor local evacuation alerts." }
+      },
+      {
+        id: "city-manaus", type: "city", name: "Manaus, Brazil", shortName: "Manaus", country: "Brazil",
+        lat: -3.12, lon: -60.02, tempC: 36.8, aqi: 194, pm25: 136.4, pm10: 185.0,
+        disaster: { type: "DROUGHT & SMOKE", shortTag: "DROUGHT", severity: "CRITICAL", summary: "Extreme Rio Negro drought combined with dense smoke plumes from Amazon basin fires.", action: "Conserve water supplies and wear N95 protection outdoors." }
+      },
+      {
+        id: "city-athens", type: "city", name: "Athens, Greece", shortName: "Athens", country: "Greece",
+        lat: 37.98, lon: 23.73, tempC: 29.6, aqi: 144, pm25: 53.0, pm10: 82.4,
+        disaster: { type: "HEAT & FIRE ALERT", shortTag: "HEAT/FIRE", severity: "HIGH", summary: "Warm dry winds and persistent soil dryness elevating Attica wildland fire risk.", action: "Avoid forested hills and heed Civil Protection 112 warnings." }
+      },
+      {
+        id: "city-jakarta", type: "city", name: "Jakarta, Indonesia", shortName: "Jakarta", country: "Indonesia",
+        lat: -6.21, lon: 106.85, tempC: 31.8, aqi: 158, pm25: 69.2, pm10: 102.5,
+        disaster: { type: "COASTAL FLOOD", shortTag: "FLOOD", severity: "HIGH", summary: "Spring tides combined with intense convective rainfall causing coastal and urban flooding alerts.", action: "Monitor BNPB water-level bulletins and avoid flooded underpasses." }
+      },
+      {
+        id: "city-sydney", type: "city", name: "Sydney, Australia", shortName: "Sydney", country: "Australia",
+        lat: -33.87, lon: 151.21, tempC: 30.2, aqi: 152, pm25: 58.6, pm10: 91.0,
+        disaster: { type: "BUSHFIRE SMOKE", shortTag: "SMOKE", severity: "HIGH", summary: "Downwind bushfire smoke from Blue Mountains fronts degrading metro air quality.", action: "Run indoor air conditioning on recirculate and check NSW RFS updates." }
+      },
+
+      // --- NORMAL GLOBAL & INDIAN CITIES (SHOWN AS UNLABELED AQI DOTS ON GLOBE) ---
+      { id: "city-lucknow", type: "city", name: "Lucknow, Uttar Pradesh, India", shortName: "Lucknow", country: "India", lat: 26.85, lon: 80.95, tempC: 25.2, aqi: 146, pm25: 54.0, pm10: 86.2, disaster: null },
+      { id: "city-mumbai", type: "city", name: "Mumbai, Maharashtra, India", shortName: "Mumbai", country: "India", lat: 19.08, lon: 72.88, tempC: 30.4, aqi: 118, pm25: 42.6, pm10: 71.0, disaster: null },
+      { id: "city-bengaluru", type: "city", name: "Bengaluru, Karnataka, India", shortName: "Bengaluru", country: "India", lat: 12.97, lon: 77.59, tempC: 24.1, aqi: 62, pm25: 17.4, pm10: 34.2, disaster: null },
+      { id: "city-kolkata", type: "city", name: "Kolkata, West Bengal, India", shortName: "Kolkata", country: "India", lat: 22.57, lon: 88.36, tempC: 27.6, aqi: 148, pm25: 55.1, pm10: 88.4, disaster: null },
+      { id: "city-chennai", type: "city", name: "Chennai, Tamil Nadu, India", shortName: "Chennai", country: "India", lat: 13.08, lon: 80.27, tempC: 29.8, aqi: 74, pm25: 23.0, pm10: 44.5, disaster: null },
+      { id: "city-hyderabad", type: "city", name: "Hyderabad, Telangana, India", shortName: "Hyderabad", country: "India", lat: 17.39, lon: 78.49, tempC: 27.2, aqi: 88, pm25: 29.4, pm10: 52.8, disaster: null },
+      { id: "city-jaipur", type: "city", name: "Jaipur, Rajasthan, India", shortName: "Jaipur", country: "India", lat: 26.91, lon: 75.79, tempC: 26.8, aqi: 132, pm25: 47.8, pm10: 79.4, disaster: null },
+      { id: "city-ahmedabad", type: "city", name: "Ahmedabad, Gujarat, India", shortName: "Ahmedabad", country: "India", lat: 23.02, lon: 72.57, tempC: 29.5, aqi: 124, pm25: 44.9, pm10: 74.0, disaster: null },
+      { id: "city-pune", type: "city", name: "Pune, Maharashtra, India", shortName: "Pune", country: "India", lat: 18.52, lon: 73.86, tempC: 26.4, aqi: 78, pm25: 24.8, pm10: 46.2, disaster: null },
+      { id: "city-srinagar", type: "city", name: "Srinagar, J&K, India", shortName: "Srinagar", country: "India", lat: 34.08, lon: 74.80, tempC: 11.4, aqi: 54, pm25: 13.8, pm10: 27.5, disaster: null },
+      { id: "city-leh", type: "city", name: "Leh, Ladakh, India", shortName: "Leh", country: "India", lat: 34.15, lon: 77.58, tempC: 4.2, aqi: 28, pm25: 6.4, pm10: 14.2, disaster: null },
+      { id: "city-kochi", type: "city", name: "Kochi, Kerala, India", shortName: "Kochi", country: "India", lat: 9.93, lon: 76.27, tempC: 28.9, aqi: 46, pm25: 10.8, pm10: 21.6, disaster: null },
+      { id: "city-kathmandu", type: "city", name: "Kathmandu, Nepal", shortName: "Kathmandu", country: "Nepal", lat: 27.72, lon: 85.32, tempC: 18.5, aqi: 112, pm25: 39.8, pm10: 66.0, disaster: null },
+      { id: "city-dhaka", type: "city", name: "Dhaka, Bangladesh", shortName: "Dhaka", country: "Bangladesh", lat: 23.81, lon: 90.41, tempC: 27.9, aqi: 162, pm25: 76.0, pm10: 112.0, disaster: null },
+      { id: "city-colombo", type: "city", name: "Colombo, Sri Lanka", shortName: "Colombo", country: "Sri Lanka", lat: 6.93, lon: 79.86, tempC: 29.4, aqi: 52, pm25: 12.9, pm10: 25.4, disaster: null },
+      { id: "city-tokyo", type: "city", name: "Tokyo, Japan", shortName: "Tokyo", country: "Japan", lat: 35.68, lon: 139.69, tempC: 15.6, aqi: 38, pm25: 9.2, pm10: 18.4, disaster: null },
+      { id: "city-seoul", type: "city", name: "Seoul, South Korea", shortName: "Seoul", country: "South Korea", lat: 37.57, lon: 126.98, tempC: 11.8, aqi: 56, pm25: 14.6, pm10: 28.9, disaster: null },
+      { id: "city-beijing", type: "city", name: "Beijing, China", shortName: "Beijing", country: "China", lat: 39.90, lon: 116.41, tempC: 9.4, aqi: 92, pm25: 31.8, pm10: 56.2, disaster: null },
+      { id: "city-shanghai", type: "city", name: "Shanghai, China", shortName: "Shanghai", country: "China", lat: 31.23, lon: 121.47, tempC: 16.2, aqi: 68, pm25: 20.4, pm10: 38.6, disaster: null },
+      { id: "city-singapore", type: "city", name: "Singapore", shortName: "Singapore", country: "Singapore", lat: 1.35, lon: 103.82, tempC: 30.1, aqi: 49, pm25: 11.8, pm10: 22.4, disaster: null },
+      { id: "city-bangkok", type: "city", name: "Bangkok, Thailand", shortName: "Bangkok", country: "Thailand", lat: 13.76, lon: 100.50, tempC: 31.4, aqi: 104, pm25: 36.8, pm10: 61.5, disaster: null },
+      { id: "city-dubai", type: "city", name: "Dubai, UAE", shortName: "Dubai", country: "UAE", lat: 25.20, lon: 55.27, tempC: 29.6, aqi: 114, pm25: 40.6, pm10: 76.8, disaster: null },
+      { id: "city-riyadh", type: "city", name: "Riyadh, Saudi Arabia", shortName: "Riyadh", country: "Saudi Arabia", lat: 24.71, lon: 46.68, tempC: 26.8, aqi: 108, pm25: 38.2, pm10: 72.4, disaster: null },
+      { id: "city-cairo", type: "city", name: "Cairo, Egypt", shortName: "Cairo", country: "Egypt", lat: 30.04, lon: 31.24, tempC: 23.4, aqi: 126, pm25: 45.6, pm10: 82.0, disaster: null },
+      { id: "city-istanbul", type: "city", name: "Istanbul, Turkey", shortName: "Istanbul", country: "Turkey", lat: 41.01, lon: 28.98, tempC: 14.8, aqi: 58, pm25: 15.4, pm10: 30.1, disaster: null },
+      { id: "city-moscow", type: "city", name: "Moscow, Russia", shortName: "Moscow", country: "Russia", lat: 55.76, lon: 37.62, tempC: 1.4, aqi: 34, pm25: 8.1, pm10: 16.5, disaster: null },
+      { id: "city-london", type: "city", name: "London, United Kingdom", shortName: "London", country: "UK", lat: 51.51, lon: -0.13, tempC: 9.8, aqi: 29, pm25: 6.8, pm10: 14.0, disaster: null },
+      { id: "city-paris", type: "city", name: "Paris, France", shortName: "Paris", country: "France", lat: 48.86, lon: 2.35, tempC: 10.6, aqi: 36, pm25: 8.6, pm10: 17.2, disaster: null },
+      { id: "city-berlin", type: "city", name: "Berlin, Germany", shortName: "Berlin", country: "Germany", lat: 52.52, lon: 13.41, tempC: 7.9, aqi: 31, pm25: 7.4, pm10: 15.1, disaster: null },
+      { id: "city-madrid", type: "city", name: "Madrid, Spain", shortName: "Madrid", country: "Spain", lat: 40.42, lon: -3.70, tempC: 14.2, aqi: 42, pm25: 10.1, pm10: 20.4, disaster: null },
+      { id: "city-rome", type: "city", name: "Rome, Italy", shortName: "Rome", country: "Italy", lat: 41.90, lon: 12.50, tempC: 16.5, aqi: 47, pm25: 11.3, pm10: 23.0, disaster: null },
+      { id: "city-lagos", type: "city", name: "Lagos, Nigeria", shortName: "Lagos", country: "Nigeria", lat: 6.52, lon: 3.38, tempC: 30.6, aqi: 116, pm25: 41.5, pm10: 69.2, disaster: null },
+      { id: "city-nairobi", type: "city", name: "Nairobi, Kenya", shortName: "Nairobi", country: "Kenya", lat: -1.29, lon: 36.82, tempC: 24.4, aqi: 66, pm25: 19.2, pm10: 36.5, disaster: null },
+      { id: "city-johannesburg", type: "city", name: "Johannesburg, South Africa", shortName: "Johannesburg", country: "South Africa", lat: -26.20, lon: 28.05, tempC: 22.8, aqi: 64, pm25: 18.4, pm10: 35.0, disaster: null },
+      { id: "city-capetown", type: "city", name: "Cape Town, South Africa", shortName: "Cape Town", country: "South Africa", lat: -33.92, lon: 18.42, tempC: 21.4, aqi: 32, pm25: 7.6, pm10: 15.8, disaster: null },
+      { id: "city-newyork", type: "city", name: "New York, USA", shortName: "New York", country: "USA", lat: 40.71, lon: -74.01, tempC: 11.2, aqi: 41, pm25: 9.8, pm10: 19.6, disaster: null },
+      { id: "city-chicago", type: "city", name: "Chicago, USA", shortName: "Chicago", country: "USA", lat: 41.88, lon: -87.63, tempC: 6.8, aqi: 38, pm25: 9.1, pm10: 18.2, disaster: null },
+      { id: "city-toronto", type: "city", name: "Toronto, Canada", shortName: "Toronto", country: "Canada", lat: 43.65, lon: -79.38, tempC: 6.2, aqi: 27, pm25: 6.2, pm10: 13.4, disaster: null },
+      { id: "city-mexico", type: "city", name: "Mexico City, Mexico", shortName: "Mexico City", country: "Mexico", lat: 19.43, lon: -99.13, tempC: 20.6, aqi: 106, pm25: 37.5, pm10: 63.0, disaster: null },
+      { id: "city-saopaulo", type: "city", name: "São Paulo, Brazil", shortName: "São Paulo", country: "Brazil", lat: -23.55, lon: -46.63, tempC: 24.8, aqi: 72, pm25: 22.1, pm10: 41.8, disaster: null },
+      { id: "city-buenosaires", type: "city", name: "Buenos Aires, Argentina", shortName: "Buenos Aires", country: "Argentina", lat: -34.60, lon: -58.38, tempC: 23.5, aqi: 35, pm25: 8.4, pm10: 17.0, disaster: null },
+      { id: "city-melbourne", type: "city", name: "Melbourne, Australia", shortName: "Melbourne", country: "Australia", lat: -37.81, lon: 144.96, tempC: 20.4, aqi: 28, pm25: 6.5, pm10: 13.8, disaster: null },
+      { id: "city-auckland", type: "city", name: "Auckland, New Zealand", shortName: "Auckland", country: "New Zealand", lat: -36.85, lon: 174.76, tempC: 18.9, aqi: 19, pm25: 4.5, pm10: 10.2, disaster: null }
+    ];
+
+    const glaciers = [
+      {
+        id: "gangotri", type: "glacier", name: "Gangotri Glacier, Uttarakhand, India", shortName: "Gangotri",
+        lat: 30.92, lon: 79.08, baselineC: -6.4, currentC: -4.55, riseC: 1.85,
+        retreatRate: "22 m / year", iceLoss: "1.7 km retreated since 1935",
+        impact: "Primary meltwater source of the Bhagirathi–Ganga River; accelerated warming raises glacial-lake outburst flood (GLOF) risk."
+      },
+      {
+        id: "siachen", type: "glacier", name: "Siachen Glacier, Ladakh, India", shortName: "Siachen",
+        lat: 35.42, lon: 77.11, baselineC: -11.2, currentC: -9.55, riseC: 1.65,
+        retreatRate: "14 m / year", iceLoss: "18% ice volume thinned",
+        impact: "Karakoram high-altitude warming is destabilizing snowpack and altering seasonal meltwater feeding the Nubra and Indus basins."
+      },
+      {
+        id: "khumbu", type: "glacier", name: "Khumbu Glacier, Everest Region", shortName: "Khumbu",
+        lat: 27.93, lon: 86.80, baselineC: -7.1, currentC: -5.20, riseC: 1.90,
+        retreatRate: "19 m / year", iceLoss: "Expanding supraglacial ponds",
+        impact: "Rapid surface thinning above 5,000m demonstrates elevation-dependent warming across the Hindu Kush Himalaya."
+      },
+      {
+        id: "greenland", type: "glacier", name: "Jakobshavn Glacier, Greenland", shortName: "Greenland Ice",
+        lat: 69.17, lon: -49.83, baselineC: -9.8, currentC: -6.40, riseC: 3.40,
+        retreatRate: "40+ m / day calving", iceLoss: "~270 Gt / year sheet loss",
+        impact: "Arctic amplification (+3.4°C) makes Greenland the single largest cryosphere contributor to global sea-level rise."
+      },
+      {
+        id: "thwaites", type: "glacier", name: "Thwaites Glacier, West Antarctica", shortName: "Thwaites",
+        lat: -75.50, lon: -106.75, baselineC: -18.5, currentC: -16.40, riseC: 2.10,
+        retreatRate: "600 m / year grounding retreat", iceLoss: "~50 Gt / year",
+        impact: "Warm circumpolar deep ocean currents are melting the floating ice shelf from beneath."
+      }
+    ];
+
+    // =========================================================================
+    // 2. MSN-FORECAST-STYLE 6-TIER US AQI ENGINE
+    // =========================================================================
     function getAqiMeta(aqiVal) {
       const aqi = Math.max(0, Math.round(Number(aqiVal) || 42));
       const pct = Math.min(98, Math.max(2, (aqi / 350) * 100));
@@ -601,6 +1023,100 @@
     }
 
     // =========================================================================
+    // 3. OFFICIAL SURVEY OF INDIA BOUNDARY (FALLBACK + LIVE DATAMEET COMPOSITE)
+    // =========================================================================
+    function ensureCCWFeature(feat) {
+      const clone = JSON.parse(JSON.stringify(feat));
+      const fixPoly = (poly) => {
+        if (!Array.isArray(poly) || !poly.length) return poly;
+        if (d3.geoArea({ type: 'Polygon', coordinates: [poly[0]] }) > 2 * Math.PI) {
+          poly[0] = poly[0].slice().reverse();
+        }
+        return poly;
+      };
+      if (clone.geometry.type === 'Polygon') {
+        clone.geometry.coordinates = fixPoly(clone.geometry.coordinates);
+      } else if (clone.geometry.type === 'MultiPolygon') {
+        clone.geometry.coordinates = clone.geometry.coordinates.map(fixPoly);
+      }
+      return clone;
+    }
+
+    // Clean Survey of India Fallback (includes J&K, PoK, Ladakh, Aksai Chin, Arunachal)
+    let indiaOfficialGeo = ensureCCWFeature({
+      type: "Feature",
+      properties: { name: "India" },
+      geometry: {
+        type: "Polygon",
+        coordinates: [[
+          [68.18, 23.65], [68.85, 22.85], [69.05, 22.25], [70.45, 20.85], [72.15, 21.75],
+          [72.65, 20.95], [72.82, 18.95], [73.35, 16.95], [74.15, 14.85], [74.85, 12.85],
+          [75.75, 11.25], [76.25, 9.95],  [77.55, 8.08],  [78.15, 8.85],  [79.35, 9.25],
+          [79.85, 10.75], [80.28, 13.08], [80.05, 15.25], [81.65, 16.55], [83.35, 17.75],
+          [85.05, 19.35], [86.85, 20.75], [88.25, 21.65], [88.95, 22.85], [88.35, 24.45],
+          [88.85, 26.25], [89.85, 26.05], [90.25, 25.15], [92.15, 24.85], [91.45, 23.85],
+          [92.75, 22.15], [93.35, 23.85], [94.55, 24.65], [95.25, 26.25], [96.15, 26.85],
+          [97.35, 28.20], [96.35, 29.15], [94.80, 29.15], [92.95, 27.95], [91.65, 27.75],
+          [88.90, 27.25], [88.15, 27.85], [85.85, 26.65], [84.20, 27.45], [81.25, 28.55],
+          [80.95, 30.15], [79.10, 31.15], [78.95, 32.55], [79.65, 33.85], [79.85, 35.65],
+          [77.85, 35.55], [76.20, 36.45], [74.50, 37.05], [72.55, 35.90], [73.75, 34.45],
+          [74.55, 32.50], [73.85, 30.45], [71.10, 27.95], [70.95, 25.30], [68.18, 23.65]
+        ]]
+      }
+    });
+
+    function simplifyRing(ring, minSqDist) {
+      if (!Array.isArray(ring) || ring.length < 6) return ring;
+      const out = [ring[0]];
+      let prev = ring[0];
+      for (let i = 1; i < ring.length - 1; i++) {
+        const pt = ring[i];
+        const dx = pt[0] - prev[0];
+        const dy = pt[1] - prev[1];
+        if (dx * dx + dy * dy >= minSqDist) {
+          out.push(pt);
+          prev = pt;
+        }
+      }
+      out.push(ring[ring.length - 1]);
+      return out.length >= 4 ? out : ring;
+    }
+
+    function simplifyGeoFeature(feat, tolDeg = 0.06) {
+      if (!feat || !feat.geometry) return feat;
+      const minSq = tolDeg * tolDeg;
+      const clone = JSON.parse(JSON.stringify(feat));
+      if (clone.geometry.type === 'Polygon') {
+        clone.geometry.coordinates = clone.geometry.coordinates.map(r => simplifyRing(r, minSq));
+      } else if (clone.geometry.type === 'MultiPolygon') {
+        clone.geometry.coordinates = clone.geometry.coordinates
+          .map(poly => poly.map(r => simplifyRing(r, minSq)))
+          .filter(poly => poly[0] && poly[0].length >= 4);
+      }
+      return clone;
+    }
+
+    async function loadOfficialIndiaBoundary() {
+      const urls = [
+        'https://cdn.jsdelivr.net/gh/datameet/maps@master/Country/india-composite.geojson',
+        'https://raw.githubusercontent.com/datameet/maps/master/Country/india-composite.geojson'
+      ];
+      for (const url of urls) {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) continue;
+          const geo = await res.json();
+          const feat = geo.type === 'FeatureCollection' ? geo.features[0] : geo;
+          if (feat && feat.geometry) {
+            indiaOfficialGeo = ensureCCWFeature(simplifyGeoFeature(feat, 0.055));
+            globeDirty = true;
+            return;
+          }
+        } catch { /* try next mirror */ }
+      }
+    }
+
+    // =========================================================================
     // 4. ORGANIC LAND-CLIPPED BIOMES, RIVERS & NASA GISTEMP WARMING BLOOMS
     // =========================================================================
     const biomesGeo = [
@@ -629,7 +1145,6 @@
       geometry: { type: "LineString", coordinates: r.coords }
     }));
 
-    // Smooth Spherical NASA GISTEMP Global Warming Blooms (strictly clipped to land)
     const warmingBlooms = [
       { name: "Arctic & Siberian Amplification", anomaly: "+3.4 °C", lon: 105, lat: 67, radiusDeg: 18 },
       { name: "Hindu Kush Himalaya Warming", anomaly: "+1.9 °C", lon: 81, lat: 32, radiusDeg: 9.5 },
@@ -644,7 +1159,6 @@
       core: d3.geoCircle().center([w.lon, w.lat]).radius(w.radiusDeg * 0.36)()
     }));
 
-    // Google-Maps-Style Geographic Typography Labels
     const geoMapLabels = [
       { text: "INDIA", lon: 79.2, lat: 22.0, kind: "country" },
       { text: "ARABIAN SEA", lon: 65.5, lat: 15.5, kind: "ocean" },
@@ -660,7 +1174,6 @@
       { text: "ATLANTIC OCEAN", lon: -32.0, lat: 18.0, kind: "ocean" }
     ];
 
-    // Major World Cities for Realistic Night-Hemisphere Lights in Satellite Mode
     const nightCities = [
       [77.2,28.6],[72.8,19.1],[77.6,13.0],[88.3,22.6],[80.2,13.1],[78.5,17.4],[75.8,26.9],[80.9,26.8],
       [74.3,31.5],[90.4,23.8],[116.4,39.9],[121.5,31.2],[114.1,22.3],[139.7,35.7],[127.0,37.5],[100.5,13.7],
@@ -670,569 +1183,18 @@
     ];
 
     // =========================================================================
-    // 5. 60FPS 3D EARTH GLOBE ENGINE (D3 ORTHOGRAPHIC + OFF-SCREEN STARFIELD)
-    // =========================================================================
-    const canvas = document.getElementById('globeCanvas');
-    const ctx = canvas.getContext('2d', { alpha: false });
-
-    let width = window.innerWidth;
-    let height = window.innerHeight;
-    let dpr = Math.min(window.devicePixelRatio || 1, 2);
-
-    // Offscreen starfield cache (prevents redrawing 200 stars per frame)
-    const starCanvas = document.createElement('canvas');
-    const starCtx = starCanvas.getContext('2d');
-    const stars = Array.from({ length: 180 }, () => ({
-      x: Math.random(),
-      y: Math.random(),
-      r: Math.random() * 1.35 + 0.3,
-      a: Math.random() * 0.65 + 0.25
-    }));
-
-    // Globe camera & interaction state
-    let rotation = [-80.5, -22.5, 0]; // Centered cleanly on India
-    let zoomFactor = 1.18;
-    let baseRadius = Math.min(width, height) * 0.41;
-    let mapStyle = 'satellite'; // 'satellite' | 'map'
-    let layers = { dayNight: true, warming: true, glaciers: true, biomes: true };
-
-    let worldLand = null;
-    let worldBorders = null;
-    let isDragging = false;
-    let dragMoved = false;
-    let dragStart = null;
-    let rotStart = null;
-    let flyAnim = null;
-
-    // Static pre-allocated geometries for silky 60fps performance
-    const graticule10 = d3.geoGraticule10();
-    const northPoleCap = d3.geoCircle().center([0, 90]).radius(12)();
-    const southPoleCap = d3.geoCircle().center([0, -90]).radius(19)();
-
-    // Simulation state
-    let windSpeed = 24;
-    let windDir = 45;
-    let timelineHour = 24;
-    let timelinePlaying = false;
-    let lastTickMs = 0;
-    let solarState = null;
-
-    let selectedItem = null;
-    let probePoint = null;
-    let screenMarkers = [];
-
-    const projection = d3.geoOrthographic().clipAngle(90).precision(0.6);
-    const geoPath = d3.geoPath(projection, ctx);
-
-    function rebuildStarfieldCache() {
-      starCanvas.width = width * dpr;
-      starCanvas.height = height * dpr;
-      starCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const bgGrad = starCtx.createRadialGradient(width * 0.5, height * 0.5, 60, width * 0.5, height * 0.5, Math.max(width, height) * 0.85);
-      bgGrad.addColorStop(0, '#0b1528');
-      bgGrad.addColorStop(0.55, '#050a16');
-      bgGrad.addColorStop(1, '#02040a');
-      starCtx.fillStyle = bgGrad;
-      starCtx.fillRect(0, 0, width, height);
-
-      stars.forEach(s => {
-        starCtx.fillStyle = `rgba(226, 232, 240, ${s.a.toFixed(2)})`;
-        starCtx.beginPath();
-        starCtx.arc(s.x * width, s.y * height, s.r, 0, Math.PI * 2);
-        starCtx.fill();
-      });
-    }
-
-    function resizeCanvas() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      baseRadius = Math.min(width, height) * (width < 640 ? 0.44 : 0.41);
-      rebuildStarfieldCache();
-    }
-    window.addEventListener('resize', resizeCanvas);
-
-    // Compute Real-Time / Scrubbed Solar Sub-Point & Day/Night Circles
-    function updateSolarState(hourVal) {
-      const now = new Date();
-      const utcHours = (hourVal >= 23.9)
-        ? (now.getUTCHours() + now.getUTCMinutes() / 60)
-        : hourVal;
-      // Approximate solar declination for day of year
-      const startOfYear = new Date(Date.UTC(now.getUTCFullYear(), 0, 0));
-      const dayOfYear = Math.floor((now - startOfYear) / 86400000);
-      const decl = -23.44 * Math.cos((2 * Math.PI / 365) * (dayOfYear + 10));
-      const sunLon = (12 - utcHours) * 15;
-      const sunLat = decl;
-      const nightLon = ((sunLon + 180 + 540) % 360) - 180;
-      const nightLat = -sunLat;
-
-      solarState = {
-        sunCenter: [sunLon, sunLat],
-        nightCenter: [nightLon, nightLat],
-        dayHighlight: d3.geoCircle().center([sunLon, sunLat]).radius(68)(),
-        twilightOuter: d3.geoCircle().center([nightLon, nightLat]).radius(95)(),
-        twilightMid: d3.geoCircle().center([nightLon, nightLat]).radius(88)(),
-        twilightInner: d3.geoCircle().center([nightLon, nightLat]).radius(80)(),
-        deepNight: d3.geoCircle().center([nightLon, nightLat]).radius(66)()
-      };
-    }
-
-    function isVisible(lon, lat) {
-      const center = [-rotation[0], -rotation[1]];
-      return d3.geoDistance([lon, lat], center) < 1.54;
-    }
-
-    function computeDestination(lon, lat, bearingDeg, distKm) {
-      const R = 6371;
-      const brng = bearingDeg * Math.PI / 180;
-      const phi1 = lat * Math.PI / 180;
-      const lam1 = lon * Math.PI / 180;
-      const dR = distKm / R;
-      const phi2 = Math.asin(Math.sin(phi1) * Math.cos(dR) + Math.cos(phi1) * Math.sin(dR) * Math.cos(brng));
-      const lam2 = lam1 + Math.atan2(Math.sin(brng) * Math.sin(dR) * Math.cos(phi1), Math.cos(dR) - Math.sin(phi1) * Math.sin(phi2));
-      return [lam2 * 180 / Math.PI, phi2 * 180 / Math.PI];
-    }
-
-    // Load 110m Natural Earth World Topology (fast 60fps dragging + high-precision Survey of India overlay)
-    fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
-      .then(r => r.json())
-      .then(topo => {
-        worldLand = topojson.feature(topo, topo.objects.land);
-        // Filter out internal/erroneous lines near India's northern/eastern borders; Survey of India renders cleanly on top
-        worldBorders = topojson.mesh(topo, topo.objects.countries, (a, b) => a !== b);
-      })
-      .catch(() => console.log('Offline fallback globe active'));
-
-    function renderGlobe(nowMs) {
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      // 1. Space backdrop from cached offscreen starfield
-      if (mapStyle === 'satellite') {
-        ctx.drawImage(starCanvas, 0, 0, width, height);
-      } else {
-        ctx.fillStyle = '#e8eff7';
-        ctx.fillRect(0, 0, width, height);
-      }
-
-      const cx = width * 0.53;
-      const cy = height * 0.51;
-      const radius = baseRadius * zoomFactor;
-
-      projection
-        .translate([cx, cy])
-        .scale(radius)
-        .rotate(rotation)
-        .precision(isDragging ? 1.4 : 0.45);
-
-      // 2. Atmospheric Rayleigh Blue Rim Glow
-      const atmoGrad = ctx.createRadialGradient(cx, cy, radius * 0.94, cx, cy, radius * 1.13);
-      if (mapStyle === 'satellite') {
-        atmoGrad.addColorStop(0, 'rgba(56, 189, 248, 0.34)');
-        atmoGrad.addColorStop(0.55, 'rgba(37, 99, 235, 0.14)');
-        atmoGrad.addColorStop(1, 'rgba(2, 6, 23, 0)');
-      } else {
-        atmoGrad.addColorStop(0, 'rgba(37, 99, 235, 0.16)');
-        atmoGrad.addColorStop(1, 'rgba(232, 239, 247, 0)');
-      }
-      ctx.fillStyle = atmoGrad;
-      ctx.beginPath();
-      ctx.arc(cx, cy, radius * 1.13, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 3. Ocean Sphere Fill (Bathymetric Satellite vs Official Map)
-      const oceanGrad = ctx.createRadialGradient(cx - radius * 0.28, cy - radius * 0.28, radius * 0.1, cx, cy, radius);
-      if (mapStyle === 'satellite') {
-        oceanGrad.addColorStop(0, '#134074');
-        oceanGrad.addColorStop(0.55, '#0b2545');
-        oceanGrad.addColorStop(1, '#061529');
-      } else {
-        oceanGrad.addColorStop(0, '#c7e2ff');
-        oceanGrad.addColorStop(0.7, '#a5ccf5');
-        oceanGrad.addColorStop(1, '#84b4e8');
-      }
-      ctx.beginPath();
-      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-      ctx.fillStyle = oceanGrad;
-      ctx.fill();
-
-      // 4. Subtle Graticule Lines
-      ctx.beginPath();
-      geoPath(graticule10);
-      ctx.strokeStyle = mapStyle === 'satellite' ? 'rgba(148, 197, 255, 0.08)' : 'rgba(15, 23, 42, 0.06)';
-      ctx.lineWidth = 0.65;
-      ctx.stroke();
-
-      // 5. Landmasses + STRICT LAND-CLIPPED BIOMES, WARMING BLOOMS & POLAR ICE
-      if (worldLand) {
-        ctx.save();
-        ctx.beginPath();
-        geoPath(worldLand);
-        geoPath(indiaOfficialGeo);
-        ctx.fillStyle = mapStyle === 'satellite' ? '#234a35' : '#f4f5f0';
-        ctx.fill();
-        ctx.clip(); // Everything below stays strictly on land — ZERO ocean spill!
-
-        // Polar Ice Caps
-        ctx.fillStyle = mapStyle === 'satellite' ? 'rgba(226, 232, 240, 0.62)' : 'rgba(255, 255, 255, 0.85)';
-        ctx.beginPath();
-        geoPath(northPoleCap);
-        geoPath(southPoleCap);
-        ctx.fill();
-
-        // Land-Clipped Environmental Biomes
-        if (layers.biomes) {
-          for (let i = 0; i < biomesGeo.length; i++) {
-            const b = biomesGeo[i];
-            ctx.beginPath();
-            geoPath(b);
-            ctx.fillStyle = b.properties.color;
-            ctx.fill();
-          }
-          // Major River Systems
-          ctx.strokeStyle = mapStyle === 'satellite' ? '#38bdf8' : '#0284c7';
-          ctx.lineWidth = Math.max(1.2, 1.8 * zoomFactor * 0.7);
-          ctx.lineCap = 'round';
-          for (let i = 0; i < riversGeo.length; i++) {
-            ctx.beginPath();
-            geoPath(riversGeo[i]);
-            ctx.stroke();
-          }
-        }
-
-        // Smooth Spherical NASA GISTEMP Global Warming Blooms (No boxy rectangles!)
-        if (layers.warming) {
-          for (let i = 0; i < warmingBlooms.length; i++) {
-            const w = warmingBlooms[i];
-            ctx.beginPath();
-            geoPath(w.outer);
-            ctx.fillStyle = 'rgba(220, 38, 38, 0.16)';
-            ctx.fill();
-
-            ctx.beginPath();
-            geoPath(w.mid);
-            ctx.fillStyle = 'rgba(220, 38, 38, 0.22)';
-            ctx.fill();
-
-            ctx.beginPath();
-            geoPath(w.core);
-            ctx.fillStyle = 'rgba(185, 28, 28, 0.28)';
-            ctx.fill();
-          }
-        }
-
-        // International borders (drawn underneath India mask so no false lines cut J&K/Ladakh/Arunachal)
-        if (worldBorders) {
-          ctx.beginPath();
-          geoPath(worldBorders);
-          ctx.strokeStyle = mapStyle === 'satellite' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(100, 116, 139, 0.38)';
-          ctx.lineWidth = 0.65;
-          ctx.stroke();
-        }
-
-        ctx.restore();
-
-        // Subtle coastline stroke
-        ctx.beginPath();
-        geoPath(worldLand);
-        ctx.strokeStyle = mapStyle === 'satellite' ? 'rgba(148, 197, 255, 0.28)' : 'rgba(71, 85, 105, 0.45)';
-        ctx.lineWidth = 0.7;
-        ctx.stroke();
-      }
-
-      // 6. OFFICIAL SURVEY OF INDIA NATIONAL BOUNDARY (Clean unified mask + crisp border)
-      ctx.save();
-      ctx.beginPath();
-      geoPath(indiaOfficialGeo);
-      ctx.fillStyle = mapStyle === 'satellite' ? '#28573d' : '#eef5ec';
-      ctx.fill();
-      ctx.clip();
-
-      // Re-apply Indian biomes & warming zones cleanly inside official India boundary
-      if (layers.biomes) {
-        for (let i = 0; i < 3; i++) {
-          ctx.beginPath();
-          geoPath(biomesGeo[i]);
-          ctx.fillStyle = biomesGeo[i].properties.color;
-          ctx.fill();
-        }
-        ctx.strokeStyle = mapStyle === 'satellite' ? '#38bdf8' : '#0284c7';
-        ctx.lineWidth = 1.6;
-        ctx.beginPath();
-        geoPath(riversGeo[0]);
-        geoPath(riversGeo[1]);
-        ctx.stroke();
-      }
-      if (layers.warming) {
-        const hkh = warmingBlooms[1];
-        ctx.beginPath(); geoPath(hkh.outer); ctx.fillStyle = 'rgba(220, 38, 38, 0.16)'; ctx.fill();
-        ctx.beginPath(); geoPath(hkh.mid); ctx.fillStyle = 'rgba(220, 38, 38, 0.20)'; ctx.fill();
-      }
-      ctx.restore();
-
-      // Crisp Official Survey of India Outer Border
-      ctx.beginPath();
-      geoPath(indiaOfficialGeo);
-      ctx.strokeStyle = mapStyle === 'satellite' ? 'rgba(255, 255, 255, 0.92)' : '#14532d';
-      ctx.lineWidth = 1.65;
-      ctx.stroke();
-
-      // 7. GOOGLE-MAPS-STYLE DAY & NIGHT SOLAR TERMINATOR + NIGHT CITY LIGHTS
-      if (layers.dayNight && solarState) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-        ctx.clip();
-
-        // Warm daylight sheen facing the Sun
-        ctx.beginPath();
-        geoPath(solarState.dayHighlight);
-        ctx.fillStyle = mapStyle === 'satellite' ? 'rgba(255, 250, 235, 0.07)' : 'rgba(255, 251, 235, 0.10)';
-        ctx.fill();
-
-        // Feathered multi-band twilight & night shadow
-        const nightAlphaScale = mapStyle === 'satellite' ? 1.0 : 0.72;
-        ctx.beginPath(); geoPath(solarState.twilightOuter);
-        ctx.fillStyle = `rgba(3, 10, 28, ${(0.12 * nightAlphaScale).toFixed(3)})`; ctx.fill();
-
-        ctx.beginPath(); geoPath(solarState.twilightMid);
-        ctx.fillStyle = `rgba(2, 8, 24, ${(0.18 * nightAlphaScale).toFixed(3)})`; ctx.fill();
-
-        ctx.beginPath(); geoPath(solarState.twilightInner);
-        ctx.fillStyle = `rgba(2, 6, 20, ${(0.20 * nightAlphaScale).toFixed(3)})`; ctx.fill();
-
-        ctx.beginPath(); geoPath(solarState.deepNight);
-        ctx.fillStyle = `rgba(1, 4, 15, ${(0.18 * nightAlphaScale).toFixed(3)})`; ctx.fill();
-
-        // Subtle golden city lights on the night hemisphere
-        if (mapStyle === 'satellite') {
-          const nightCenter = solarState.nightCenter;
-          for (let i = 0; i < nightCities.length; i++) {
-            const c = nightCities[i];
-            if (!isVisible(c[0], c[1])) continue;
-            if (d3.geoDistance(c, nightCenter) < 1.52) {
-              const p = projection(c);
-              if (p) {
-                ctx.fillStyle = 'rgba(253, 224, 71, 0.24)';
-                ctx.beginPath();
-                ctx.arc(p[0], p[1], 4.2, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = 'rgba(254, 240, 138, 0.85)';
-                ctx.beginPath();
-                ctx.arc(p[0], p[1], 1.4, 0, Math.PI * 2);
-                ctx.fill();
-              }
-            }
-          }
-        }
-        ctx.restore();
-      }
-
-      // 8. Google-Maps-Style Geographic Typography Labels
-      ctx.save();
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      geoMapLabels.forEach(lbl => {
-        if (!isVisible(lbl.lon, lbl.lat)) return;
-        const p = projection([lbl.lon, lbl.lat]);
-        if (!p) return;
-        if (lbl.kind === 'country') {
-          ctx.font = '700 11px Inter, sans-serif';
-          ctx.fillStyle = mapStyle === 'satellite' ? 'rgba(255,255,255,0.92)' : 'rgba(15,23,42,0.85)';
-        } else if (lbl.kind === 'continent') {
-          ctx.font = '700 9.5px Inter, sans-serif';
-          ctx.fillStyle = mapStyle === 'satellite' ? 'rgba(226,232,240,0.58)' : 'rgba(51,65,85,0.55)';
-        } else {
-          ctx.font = 'italic 600 9px Inter, sans-serif';
-          ctx.fillStyle = mapStyle === 'satellite' ? 'rgba(147,197,253,0.48)' : 'rgba(30,64,175,0.45)';
-        }
-        ctx.fillText(lbl.text, p[0], p[1]);
-      });
-      ctx.restore();
-
-      // 9. ACTIVE WILDFIRE MARKERS + 6-HOUR WIND SPREAD CONES + MELTING GLACIERS
-      screenMarkers = [];
-      const pulse = 0.5 + 0.5 * Math.sin(nowMs * 0.005);
-
-      // Draw Wildfires filtered by timelineHour
-      wildfires.forEach(f => {
-        if (f.hour > timelineHour) return;
-        if (!isVisible(f.lon, f.lat)) return;
-        const p = projection([f.lon, f.lat]);
-        if (!p) return;
-
-        const isSel = selectedItem && selectedItem.id === f.id;
-        const baseColor = f.risk === 'CRITICAL' ? '#ef4444' : '#f59e0b';
-
-        // 6-Hour Wind Spread Cone (shown when selected or zoomed in)
-        if (isSel || zoomFactor >= 1.55) {
-          const spreadDistKm = Math.max(45, windSpeed * 4.2);
-          const leftPt = projection(computeDestination(f.lon, f.lat, (windDir - 22 + 360) % 360, spreadDistKm));
-          const midPt = projection(computeDestination(f.lon, f.lat, windDir, spreadDistKm * 1.15));
-          const rightPt = projection(computeDestination(f.lon, f.lat, (windDir + 22) % 360, spreadDistKm));
-          if (leftPt && midPt && rightPt) {
-            ctx.beginPath();
-            ctx.moveTo(p[0], p[1]);
-            ctx.lineTo(leftPt[0], leftPt[1]);
-            ctx.quadraticCurveTo(midPt[0], midPt[1], rightPt[0], rightPt[1]);
-            ctx.closePath();
-            ctx.fillStyle = 'rgba(249, 115, 22, 0.28)';
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(251, 146, 60, 0.85)';
-            ctx.lineWidth = 1.2;
-            ctx.stroke();
-          }
-        }
-
-        // Animated Halo Ring
-        ctx.beginPath();
-        ctx.arc(p[0], p[1], (isSel ? 13 : 8.5) + pulse * 4.5, 0, Math.PI * 2);
-        ctx.fillStyle = f.risk === 'CRITICAL' ? 'rgba(239, 68, 68, 0.28)' : 'rgba(245, 158, 11, 0.25)';
-        ctx.fill();
-
-        // Core Pin
-        ctx.beginPath();
-        ctx.arc(p[0], p[1], isSel ? 6.5 : 4.8, 0, Math.PI * 2);
-        ctx.fillStyle = baseColor;
-        ctx.fill();
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1.6;
-        ctx.stroke();
-
-        // Compact Pill Label
-        if (zoomFactor >= 1.05 || isSel) {
-          const label = `${f.shortName} • ${f.fireC}°C`;
-          ctx.font = '700 10px Inter, sans-serif';
-          const tw = ctx.measureText(label).width;
-          const bx = p[0] + 9;
-          const by = p[1] - 10;
-          ctx.fillStyle = isSel ? '#0f172a' : 'rgba(15, 23, 42, 0.84)';
-          ctx.beginPath();
-          ctx.roundRect(bx, by, tw + 10, 18, 6);
-          ctx.fill();
-          ctx.fillStyle = '#ffffff';
-          ctx.textAlign = 'left';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(label, bx + 5, by + 9);
-        }
-
-        screenMarkers.push({ x: p[0], y: p[1], r: 14, item: f });
-      });
-
-    // Fetch exact official Survey of India composite boundary (DataMeet open map)
-    // and simplify vertices slightly (0.06° tolerance) for locked 60fps rendering
-    function simplifyRing(ring, minSqDist) {
-      if (!Array.isArray(ring) || ring.length < 6) return ring;
-      const out = [ring[0]];
-      let prev = ring[0];
-      for (let i = 1; i < ring.length - 1; i++) {
-        const pt = ring[i];
-        const dx = pt[0] - prev[0];
-        const dy = pt[1] - prev[1];
-        if (dx * dx + dy * dy >= minSqDist) {
-          out.push(pt);
-          prev = pt;
-        }
-      }
-      out.push(ring[ring.length - 1]);
-      return out.length >= 4 ? out : ring;
-    }
-
-    function simplifyGeoFeature(feat, tolDeg = 0.065) {
-      if (!feat || !feat.geometry) return feat;
-      const minSq = tolDeg * tolDeg;
-      const clone = JSON.parse(JSON.stringify(feat));
-      if (clone.geometry.type === 'Polygon') {
-        clone.geometry.coordinates = clone.geometry.coordinates.map(r => simplifyRing(r, minSq));
-      } else if (clone.geometry.type === 'MultiPolygon') {
-        clone.geometry.coordinates = clone.geometry.coordinates
-          .map(poly => poly.map(r => simplifyRing(r, minSq)))
-          .filter(poly => poly[0] && poly[0].length >= 4);
-      }
-      return clone;
-    }
-
-    async function loadOfficialIndiaBoundary() {
-      const urls = [
-        'https://cdn.jsdelivr.net/gh/datameet/maps@master/Country/india-composite.geojson',
-        'https://raw.githubusercontent.com/datameet/maps/master/Country/india-composite.geojson'
-      ];
-      for (const url of urls) {
-        try {
-          const res = await fetch(url);
-          if (!res.ok) continue;
-          const geo = await res.json();
-          const feat = geo.type === 'FeatureCollection' ? geo.features[0] : geo;
-          if (feat && feat.geometry) {
-            indiaOfficialGeo = ensureCCWFeature(simplifyGeoFeature(feat, 0.06));
-            globeDirty = true;
-            return;
-          }
-        } catch { /* try next mirror */ }
-      }
-    }
-
-    function animateLoop(nowMs = 0) {
-      // Smooth fly-to interpolation
-      if (flyAnim) {
-        const t = Math.min(1, (nowMs - flyAnim.startMs) / flyAnim.duration);
-        const ease = 1 - Math.pow(1 - t, 3);
-        rotation[0] = flyAnim.fromRot[0] + (flyAnim.toRot[0] - flyAnim.fromRot[0]) * ease;
-        rotation[1] = flyAnim.fromRot[1] + (flyAnim.toRot[1] - flyAnim.fromRot[1]) * ease;
-        zoomFactor = flyAnim.fromZoom + (flyAnim.toZoom - flyAnim.fromZoom) * ease;
-        if (t >= 1) flyAnim = null;
-      }
-
-      // Auto-play 24h orbital scrubber
-      if (timelinePlaying && nowMs - lastTickMs > 180) {
-        lastTickMs = nowMs;
-        timelineHour = (timelineHour >= 24) ? 0 : +(timelineHour + 0.5).toFixed(1);
-        document.getElementById('timelineSlider').value = timelineHour;
-        setTimelineHour(timelineHour, true);
-      }
-
-      renderGlobe(nowMs);
-      requestAnimationFrame(animateLoop);
-    }
-
-    function flyTo(lon, lat, targetZoom = 2.35) {
-      flyAnim = {
-        startMs: performance.now(),
-        duration: 950,
-        fromRot: [...rotation],
-        toRot: [-lon, -lat, 0],
-        fromZoom: zoomFactor,
-        toZoom: targetZoom
-      };
-    }
-
-    function zoomGlobe(mult) {
-      zoomFactor = Math.max(0.75, Math.min(5.2, zoomFactor * mult));
-    }
-
-    function resetIndiaFocus() {
-      flyTo(80.5, 22.5, 1.35);
-    }
-
-    // =========================================================================
     // 5. LOCKED 60FPS+ 3D EARTH GLOBE ENGINE (OFFSCREEN BASE CACHE + INERTIA)
     // =========================================================================
     const canvas = document.getElementById('globeCanvas');
     const ctx = canvas.getContext('2d', { alpha: false });
 
-    // Offscreen Base Globe Cache: only re-renders when rotation/zoom/layers change!
     const globeBaseCanvas = document.createElement('canvas');
     const baseCtx = globeBaseCanvas.getContext('2d', { alpha: false });
 
     let width = window.innerWidth;
     let height = window.innerHeight;
-    let dpr = Math.min(window.devicePixelRatio || 1, 1.5); // Crisp retina without GPU fill-rate stall
+    let dpr = Math.min(window.devicePixelRatio || 1, 1.5);
 
-    // Offscreen starfield cache (prevents redrawing stars per frame)
     const starCanvas = document.createElement('canvas');
     const starCtx = starCanvas.getContext('2d');
     const stars = Array.from({ length: 160 }, () => ({
@@ -1242,14 +1204,13 @@
       a: Math.random() * 0.65 + 0.25
     }));
 
-    // Globe camera, inertia & interaction state
-    let rotation = [-80.5, -22.5, 0]; // Centered cleanly on India
+    let rotation = [-80.5, -22.5, 0];
     let velLon = 0;
     let velLat = 0;
     let zoomFactor = 1.18;
     let baseRadius = Math.min(width, height) * 0.41;
-    let mapStyle = 'satellite'; // 'satellite' | 'map'
-    let layers = { dayNight: true, aqi: true, warming: true, glaciers: true, biomes: true };
+    let mapStyle = 'satellite';
+    let layers = { dayNight: true, cities: true, droughts: true, aqi: true, warming: true, glaciers: true, biomes: true };
     let globeDirty = true;
 
     let worldLand = null;
@@ -1261,12 +1222,10 @@
     let rotStart = null;
     let flyAnim = null;
 
-    // Static pre-allocated geometries for silky 60fps performance
     const graticule10 = d3.geoGraticule10();
     const northPoleCap = d3.geoCircle().center([0, 90]).radius(12)();
     const southPoleCap = d3.geoCircle().center([0, -90]).radius(19)();
 
-    // Simulation state
     let windSpeed = 24;
     let windDir = 45;
     let timelineHour = 24;
@@ -1318,7 +1277,6 @@
     }
     window.addEventListener('resize', resizeCanvas);
 
-    // Compute Real-Time / Scrubbed Solar Sub-Point & Day/Night Circles
     function updateSolarState(hourVal) {
       const now = new Date();
       const utcHours = (hourVal >= 23.9)
@@ -1359,7 +1317,6 @@
       return [lam2 * 180 / Math.PI, phi2 * 180 / Math.PI];
     }
 
-    // Load 110m Natural Earth World Topology (ultra-fast 60fps dragging + official Survey of India overlay)
     fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
       .then(r => r.json())
       .then(topo => {
@@ -1369,7 +1326,6 @@
       })
       .catch(() => console.log('Offline fallback globe active'));
 
-    // Renders the static globe sphere + land + biomes + India + Day/Night into globeBaseCanvas ONLY when dirty
     function renderGlobeBase() {
       baseCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
@@ -1391,7 +1347,6 @@
         .rotate(rotation)
         .precision(fastMode ? 2.4 : 0.65);
 
-      // 1. Atmospheric Rayleigh Blue Rim Glow
       const atmoGrad = baseCtx.createRadialGradient(cx, cy, radius * 0.94, cx, cy, radius * 1.12);
       if (mapStyle === 'satellite') {
         atmoGrad.addColorStop(0, 'rgba(56, 189, 248, 0.34)');
@@ -1406,7 +1361,6 @@
       baseCtx.arc(cx, cy, radius * 1.12, 0, Math.PI * 2);
       baseCtx.fill();
 
-      // 2. Ocean Sphere Fill
       const oceanGrad = baseCtx.createRadialGradient(cx - radius * 0.28, cy - radius * 0.28, radius * 0.1, cx, cy, radius);
       if (mapStyle === 'satellite') {
         oceanGrad.addColorStop(0, '#134074');
@@ -1422,7 +1376,6 @@
       baseCtx.fillStyle = oceanGrad;
       baseCtx.fill();
 
-      // 3. Subtle Graticule (skipped during ultra-fast drag for extra headroom)
       if (!fastMode) {
         baseCtx.beginPath();
         baseGeoPath(graticule10);
@@ -1431,7 +1384,6 @@
         baseCtx.stroke();
       }
 
-      // 4. Landmasses + STRICT LAND-CLIPPED BIOMES, WARMING BLOOMS & POLAR ICE
       if (worldLand) {
         baseCtx.save();
         baseCtx.beginPath();
@@ -1441,14 +1393,12 @@
         baseCtx.fill();
         baseCtx.clip();
 
-        // Polar Ice Caps
         baseCtx.fillStyle = mapStyle === 'satellite' ? 'rgba(226, 232, 240, 0.60)' : 'rgba(255, 255, 255, 0.85)';
         baseCtx.beginPath();
         baseGeoPath(northPoleCap);
         baseGeoPath(southPoleCap);
         baseCtx.fill();
 
-        // Land-Clipped Environmental Biomes
         if (layers.biomes) {
           for (let i = 0; i < biomesGeo.length; i++) {
             baseCtx.beginPath();
@@ -1466,7 +1416,6 @@
           }
         }
 
-        // Smooth Spherical NASA GISTEMP Global Warming Blooms (strictly on land)
         if (layers.warming) {
           for (let i = 0; i < warmingBlooms.length; i++) {
             const w = warmingBlooms[i];
@@ -1494,7 +1443,7 @@
         baseCtx.stroke();
       }
 
-      // 5. OFFICIAL SURVEY OF INDIA NATIONAL BOUNDARY (Clean unified mask + crisp border)
+      // Official Survey of India Unified National Boundary Mask
       baseCtx.save();
       baseCtx.beginPath();
       baseGeoPath(indiaOfficialGeo);
@@ -1529,7 +1478,7 @@
       baseCtx.lineWidth = 1.65;
       baseCtx.stroke();
 
-      // 6. GOOGLE-MAPS-STYLE DAY & NIGHT SOLAR TERMINATOR + NIGHT CITY LIGHTS
+      // Google-Maps-Style Day & Night Terminator + Night City Lights
       if (layers.dayNight && solarState) {
         baseCtx.save();
         baseCtx.beginPath();
@@ -1574,7 +1523,6 @@
         baseCtx.restore();
       }
 
-      // 7. Google-Maps-Style Geographic Typography Labels
       baseCtx.save();
       baseCtx.textAlign = 'center';
       baseCtx.textBaseline = 'middle';
@@ -1600,7 +1548,6 @@
       globeDirty = false;
     }
 
-    // Blits cached globeBaseCanvas in 1 GPU call, then draws lightweight animated pins & AQI pills at 60fps
     function renderGlobe(nowMs) {
       if (globeDirty) {
         renderGlobeBase();
@@ -1610,10 +1557,129 @@
       ctx.drawImage(globeBaseCanvas, 0, 0);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      // ACTIVE WILDFIRE MARKERS + 6-HOUR WIND SPREAD CONES + MSN AQI PILLS + MELTING GLACIERS
       screenMarkers = [];
       const pulse = 0.5 + 0.5 * Math.sin(nowMs * 0.005);
 
+      // 1. NORMAL GLOBAL CITIES (Displayed as clean AQI-colored dots — NO text labels on globe)
+      if (layers.cities) {
+        for (let i = 0; i < worldCities.length; i++) {
+          const c = worldCities[i];
+          if (c.disaster) continue;
+          if (!isVisible(c.lon, c.lat)) continue;
+          const p = projection([c.lon, c.lat]);
+          if (!p) continue;
+          const isSel = selectedItem && selectedItem.id === c.id;
+          const am = getAqiMeta(c.aqi);
+
+          ctx.beginPath();
+          ctx.arc(p[0], p[1], isSel ? 5.6 : 3.4, 0, Math.PI * 2);
+          ctx.fillStyle = am.color;
+          ctx.fill();
+          ctx.strokeStyle = isSel ? '#ffffff' : 'rgba(255, 255, 255, 0.85)';
+          ctx.lineWidth = isSel ? 1.8 : 1.05;
+          ctx.stroke();
+
+          screenMarkers.push({ x: p[0], y: p[1], r: 10, item: c });
+        }
+      }
+
+      // 2. GLOBAL DROUGHT ZONES (Marked with Amber Diamond + Labeled on Globe)
+      if (layers.droughts) {
+        for (let i = 0; i < droughts.length; i++) {
+          const d = droughts[i];
+          if (!isVisible(d.lon, d.lat)) continue;
+          const p = projection([d.lon, d.lat]);
+          if (!p) continue;
+          const isSel = selectedItem && selectedItem.id === d.id;
+
+          ctx.beginPath();
+          ctx.arc(p[0], p[1], (isSel ? 13 : 8.5) + pulse * 3.5, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(217, 119, 6, 0.25)';
+          ctx.fill();
+
+          // Diamond marker for Drought
+          const sz = isSel ? 7 : 5.4;
+          ctx.beginPath();
+          ctx.moveTo(p[0], p[1] - sz);
+          ctx.lineTo(p[0] + sz, p[1]);
+          ctx.lineTo(p[0], p[1] + sz);
+          ctx.lineTo(p[0] - sz, p[1]);
+          ctx.closePath();
+          ctx.fillStyle = '#d97706';
+          ctx.fill();
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          const label = `DROUGHT • ${d.shortName} (${d.deficit})`;
+          ctx.font = '700 9.5px Inter, sans-serif';
+          const tw = ctx.measureText(label).width;
+          const bx = p[0] + 9;
+          const by = p[1] - 9;
+          ctx.fillStyle = isSel ? '#78350f' : 'rgba(120, 53, 15, 0.90)';
+          ctx.beginPath();
+          ctx.roundRect(bx, by, tw + 11, 17, 6);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(251, 191, 36, 0.6)';
+          ctx.lineWidth = 0.8;
+          ctx.stroke();
+          ctx.fillStyle = '#fef3c7';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(label, bx + 5.5, by + 8.5);
+
+          screenMarkers.push({ x: p[0], y: p[1], r: 14, item: d });
+        }
+      }
+
+      // 3. CITIES FACING ACTIVE DISASTER (Marked with Alert Ring + Labeled on Globe)
+      if (layers.cities) {
+        for (let i = 0; i < worldCities.length; i++) {
+          const c = worldCities[i];
+          if (!c.disaster) continue;
+          if (!isVisible(c.lon, c.lat)) continue;
+          const p = projection([c.lon, c.lat]);
+          if (!p) continue;
+          const isSel = selectedItem && selectedItem.id === c.id;
+          const am = getAqiMeta(c.aqi);
+
+          ctx.beginPath();
+          ctx.arc(p[0], p[1], (isSel ? 14 : 9.5) + pulse * 4.0, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(225, 29, 72, 0.28)';
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(p[0], p[1], isSel ? 6.5 : 5.0, 0, Math.PI * 2);
+          ctx.fillStyle = '#e11d48';
+          ctx.fill();
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.8;
+          ctx.stroke();
+
+          const label = layers.aqi
+            ? `⚠ ${c.shortName} • ${c.disaster.shortTag} • ${c.tempC}°C • AQI ${am.aqi}`
+            : `⚠ ${c.shortName} • ${c.disaster.shortTag} • ${c.tempC}°C`;
+          ctx.font = '700 9.6px Inter, sans-serif';
+          const tw = ctx.measureText(label).width;
+          const bx = p[0] + 9;
+          const by = p[1] - 10;
+          ctx.fillStyle = isSel ? '#881337' : 'rgba(136, 19, 55, 0.92)';
+          ctx.beginPath();
+          ctx.roundRect(bx, by, tw + 12, 18, 6);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(251, 113, 133, 0.7)';
+          ctx.lineWidth = 0.85;
+          ctx.stroke();
+          ctx.fillStyle = '#ffffff';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(label, bx + 6, by + 9);
+
+          screenMarkers.push({ x: p[0], y: p[1], r: 14, item: c });
+        }
+      }
+
+      // 4. GLOBAL WILDFIRES (Marked & Labeled on Globe)
       for (let i = 0; i < wildfires.length; i++) {
         const f = wildfires[i];
         if (f.hour > timelineHour) continue;
@@ -1656,31 +1722,29 @@
         ctx.lineWidth = 1.6;
         ctx.stroke();
 
-        if (zoomFactor >= 1.05 || isSel) {
-          const aqiMeta = getAqiMeta(f.aqi || 120);
-          const label = layers.aqi
-            ? `${f.shortName} • ${f.fireC}°C • AQI ${aqiMeta.aqi}`
-            : `${f.shortName} • ${f.fireC}°C`;
-          ctx.font = '700 9.8px Inter, sans-serif';
-          const tw = ctx.measureText(label).width;
-          const bx = p[0] + 9;
-          const by = p[1] - 10;
-          ctx.fillStyle = isSel ? '#0f172a' : 'rgba(15, 23, 42, 0.86)';
-          ctx.beginPath();
-          ctx.roundRect(bx, by, tw + (layers.aqi ? 16 : 10), 18, 6);
-          ctx.fill();
+        const aqiMeta = getAqiMeta(f.aqi || 120);
+        const label = layers.aqi
+          ? `FIRE • ${f.shortName} • ${f.fireC}°C • AQI ${aqiMeta.aqi}`
+          : `FIRE • ${f.shortName} • ${f.fireC}°C`;
+        ctx.font = '700 9.6px Inter, sans-serif';
+        const tw = ctx.measureText(label).width;
+        const bx = p[0] + 9;
+        const by = p[1] - 10;
+        ctx.fillStyle = isSel ? '#0f172a' : 'rgba(15, 23, 42, 0.88)';
+        ctx.beginPath();
+        ctx.roundRect(bx, by, tw + (layers.aqi ? 16 : 10), 18, 6);
+        ctx.fill();
 
-          if (layers.aqi) {
-            ctx.fillStyle = aqiMeta.color;
-            ctx.beginPath();
-            ctx.arc(bx + 7, by + 9, 3.2, 0, Math.PI * 2);
-            ctx.fill();
-          }
-          ctx.fillStyle = '#ffffff';
-          ctx.textAlign = 'left';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(label, bx + (layers.aqi ? 13 : 5), by + 9);
+        if (layers.aqi) {
+          ctx.fillStyle = aqiMeta.color;
+          ctx.beginPath();
+          ctx.arc(bx + 7, by + 9, 3.2, 0, Math.PI * 2);
+          ctx.fill();
         }
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, bx + (layers.aqi ? 13 : 5), by + 9);
 
         screenMarkers.push({ x: p[0], y: p[1], r: 14, item: f });
       }
@@ -1738,7 +1802,6 @@
     }
 
     function animateLoop(nowMs = 0) {
-      // Smooth fly-to interpolation
       if (flyAnim) {
         const t = Math.min(1, (nowMs - flyAnim.startMs) / flyAnim.duration);
         const ease = 1 - Math.pow(1 - t, 3);
@@ -1748,7 +1811,6 @@
         globeDirty = true;
         if (t >= 1) flyAnim = null;
       } else if (!isDragging && (Math.abs(velLon) > 0.015 || Math.abs(velLat) > 0.015)) {
-        // Silky inertial coasting after pointer release
         rotation[0] += velLon;
         rotation[1] = Math.max(-85, Math.min(85, rotation[1] + velLat));
         velLon *= 0.91;
@@ -1758,11 +1820,11 @@
         globeDirty = true;
       }
 
-      // Auto-play 24h orbital scrubber
       if (timelinePlaying && nowMs - lastTickMs > 180) {
         lastTickMs = nowMs;
         timelineHour = (timelineHour >= 24) ? 0 : +(timelineHour + 0.5).toFixed(1);
-        document.getElementById('timelineSlider').value = timelineHour;
+        const slider = document.getElementById('timelineSlider');
+        if (slider) slider.value = timelineHour;
         setTimelineHour(timelineHour, true);
       }
 
@@ -1839,7 +1901,6 @@
         return;
       }
 
-      // Magnetic Hover Crosshair HUD (with MSN AQI)
       const hit = findMarkerAt(x, y);
       const hud = document.getElementById('hoverHud');
       if (hit) {
@@ -1860,6 +1921,29 @@
               <span class="font-extrabold mono" style="color:${am.color}">${am.aqi} (${am.label})</span>
             </div>
           `;
+        } else if (hit.type === 'drought') {
+          const am = getAqiMeta(hit.aqi || 85);
+          hud.innerHTML = `
+            <div class="font-bold text-amber-300">${escapeHtml(hit.name)}</div>
+            <div class="text-[10px] text-amber-100 font-semibold">${escapeHtml(hit.severity)} DROUGHT • ${escapeHtml(hit.deficit)}</div>
+            <div class="mt-1 flex gap-3 mono text-[10px]">
+              <span class="text-orange-300">Temp: ${hit.tempC}°C</span>
+              <span style="color:${am.color}">AQI ${am.aqi} (${am.label})</span>
+            </div>
+          `;
+        } else if (hit.type === 'city') {
+          const am = getAqiMeta(hit.aqi);
+          hud.innerHTML = `
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-bold text-white">${escapeHtml(hit.name)}</span>
+              ${hit.disaster ? `<span class="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[9px] font-extrabold">${escapeHtml(hit.disaster.shortTag)}</span>` : ''}
+            </div>
+            <div class="mt-1 flex items-center justify-between mono text-[10.5px]">
+              <span class="text-sky-300 font-bold">Temp: ${hit.tempC}°C</span>
+              <span class="font-extrabold" style="color:${am.color}">AQI ${am.aqi} (${am.label})</span>
+            </div>
+            ${hit.disaster ? `<div class="mt-1 pt-1 border-t border-white/10 text-[10px] text-rose-200">${escapeHtml(hit.disaster.type)}</div>` : `<div class="mt-0.5 text-[9.5px] text-slate-400">Click for live Open-Meteo weather &amp; AQI</div>`}
+          `;
         } else {
           hud.innerHTML = `
             <div class="font-bold text-sky-200">${escapeHtml(hit.name)}</div>
@@ -1878,7 +1962,7 @@
     canvas.addEventListener('pointerup', (e) => {
       if (!isDragging) return;
       isDragging = false;
-      globeDirty = true; // Crisp high-precision settle redraw
+      globeDirty = true;
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
@@ -1904,7 +1988,7 @@
     }, { passive: false });
 
     // =========================================================================
-    // 7. INSPECTOR DRAWER, LIVE OPEN-METEO PROBE & NASA EONET GOV DATA
+    // 7. INSPECTOR DRAWER, LIVE OPEN-METEO WEATHER/AQI & NASA EONET
     // =========================================================================
     function inferBiome(lon, lat) {
       if (Math.abs(lat) > 62) return { name: "Polar / Boreal Tundra", ambientBase: -2.0, fuelRisk: "Low–Moderate" };
@@ -1924,10 +2008,10 @@
       probePoint = null;
       flyTo(item.lon, item.lat, 2.6);
 
-      // Ensure left panel is open
       document.getElementById('leftInspector').classList.remove('-translate-x-[120%]');
       document.getElementById('btnOpenLeft').classList.add('hidden');
       document.getElementById('btnBackFeed').classList.remove('hidden');
+      document.getElementById('inspectorTabs').classList.add('hidden');
 
       const body = document.getElementById('inspectorBody');
       if (item.type === 'fire') {
@@ -1941,8 +2025,6 @@
             <span class="${badgeCls} text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full">${item.risk} WILDFIRE</span>
             <span class="mono text-[10px] text-slate-500">${item.lat.toFixed(2)}°N, ${item.lon.toFixed(2)}°E</span>
           </div>
-
-          <!-- Synchronized Dual-Band °C Telemetry -->
           <div class="grid grid-cols-3 gap-2 text-center">
             <div class="bg-red-50 border border-red-200 rounded-xl p-2">
               <div class="text-[9.5px] font-bold text-red-700">Fire Core (T4)</div>
@@ -1957,17 +2039,11 @@
               <div class="mono font-extrabold text-sm text-amber-900">+${dt}°C</div>
             </div>
           </div>
-
-          <!-- MSN-Forecast-Style Live Air Quality Card -->
           <div id="selectedAqiSlot">${renderMsnAqiCard(item.aqi || 125, item.pm25 || 46.0, item.pm10 || 72.0)}</div>
-
-          <!-- Interactive Real-Life News & Field Photo Button -->
           <button onclick="openFireNewsModal('${escapeHtml(item.id)}')" class="w-full py-2.5 px-3.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold shadow-md transition flex items-center justify-center gap-2 cursor-pointer">
             <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
             <span>See Real-Life News &amp; Field Photo</span>
           </button>
-
-          <!-- Last Caught & Management Report -->
           <div class="bg-white border border-slate-200 rounded-2xl p-3 space-y-2 text-[11px]">
             <div class="flex items-center justify-between">
               <span class="font-bold text-slate-500">Last Wildfire Caught</span>
@@ -1988,26 +2064,21 @@
             </div>
             <p class="text-slate-600 leading-relaxed pt-1 border-t border-slate-100">${escapeHtml(item.managementNotes)}</p>
           </div>
-
-          <!-- 6-Hour Wind Spread Telemetry -->
           <div class="bg-amber-50/70 border border-amber-200 rounded-2xl p-3 text-[11px] text-amber-950">
-            <strong>6-Hour Spread Vector:</strong> Radiative Power <span class="mono font-bold">${item.frp} MW</span> moving <strong>${dirToCompass(windDir)}</strong> at <span class="mono font-bold">${windSpeed} km/h</span>. Adjust the right wind dial to simulate direction shifts.
+            <strong>6-Hour Spread Vector:</strong> Radiative Power <span class="mono font-bold">${item.frp} MW</span> moving <strong>${dirToCompass(windDir)}</strong> at <span class="mono font-bold">${windSpeed} km/h</span>.
           </div>
-
-          <!-- Official WHO & ICDO Immediate Safety Precautions -->
           <div class="bg-blue-50/80 border border-blue-200 rounded-2xl p-3 space-y-1.5 text-[11px] text-blue-950">
             <div class="flex items-center justify-between gap-2">
-              <span class="font-extrabold">WHO &amp; ICDO Immediate Precautions</span>
+              <span class="font-extrabold">WHO &amp; ICDO Precautions</span>
               <button onclick="openSafetyModal()" class="text-[10px] font-bold text-[#1a73e8] hover:underline cursor-pointer">Full Guide →</button>
             </div>
             <ul class="list-disc pl-4 space-y-1 text-[10.5px] text-slate-700">
-              <li><strong>WHO (Health):</strong> Wear a fitted <b>N95/FFP2</b> mask outdoors; seal windows and run AC on recirculate to block PM2.5 smoke.</li>
-              <li><strong>ICDO (Civil Defence):</strong> Shut off gas/LPG mains, prepare your Go-Bag, and follow official evacuation corridors immediately.</li>
+              <li><strong>WHO:</strong> Wear a fitted <b>N95/FFP2</b> mask outdoors; seal windows and run AC on recirculate.</li>
+              <li><strong>ICDO:</strong> Shut off gas/LPG mains, prepare your Go-Bag, and follow evacuation routes.</li>
             </ul>
           </div>
         `;
 
-        // Live-enrich this location's AQI from Open-Meteo Air Quality API
         fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${item.lat.toFixed(3)}&longitude=${item.lon.toFixed(3)}&current=us_aqi,pm2_5,pm10,ozone`)
           .then(r => r.ok ? r.json() : null)
           .then(aq => {
@@ -2019,8 +2090,92 @@
               if (slot) slot.innerHTML = renderMsnAqiCard(item.aqi, item.pm25, item.pm10, aq.current.ozone !== undefined ? `O₃: ${aq.current.ozone}` : '');
             }
           }).catch(() => {});
+      } else if (item.type === 'drought') {
+        document.getElementById('inspectorTitle').textContent = item.name;
+        document.getElementById('inspectorSubtitle').textContent = `${item.agency} • ${item.status}`;
+        body.innerHTML = `
+          <div class="flex items-center justify-between gap-2">
+            <span class="bg-amber-700 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full">${escapeHtml(item.severity)} DROUGHT</span>
+            <span class="mono text-[10px] text-slate-500">${item.lat.toFixed(2)}°, ${item.lon.toFixed(2)}°</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-center">
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-2.5">
+              <div class="text-[9.5px] font-bold text-amber-800">Rainfall / Flow Deficit</div>
+              <div class="mono font-extrabold text-sm text-amber-950">${escapeHtml(item.deficit)}</div>
+            </div>
+            <div class="bg-orange-50 border border-orange-200 rounded-xl p-2.5">
+              <div class="text-[9.5px] font-bold text-orange-800">Surface Temp</div>
+              <div class="mono font-extrabold text-sm text-orange-950">${item.tempC}°C</div>
+            </div>
+          </div>
+          ${renderMsnAqiCard(item.aqi, item.pm25, item.pm10)}
+          <div class="bg-white border border-slate-200 rounded-2xl p-3.5 space-y-2 text-[11px]">
+            <div class="font-bold text-slate-900">Hydrological Impact Assessment</div>
+            <p class="text-slate-600 leading-relaxed">${escapeHtml(item.detail)}</p>
+            <div class="pt-2 border-t border-slate-100 text-amber-950 bg-amber-50/70 rounded-xl p-2.5">
+              <strong>Recommended Action:</strong> ${escapeHtml(item.action)}
+            </div>
+          </div>
+        `;
+      } else if (item.type === 'city') {
+        document.getElementById('inspectorTitle').textContent = item.name;
+        document.getElementById('inspectorSubtitle').textContent = item.disaster
+          ? `Disaster Alert • ${item.disaster.type}`
+          : `${item.country} • Live Weather & MSN AQI Forecast`;
+
+        body.innerHTML = `
+          <div class="flex items-center justify-between gap-2">
+            ${item.disaster
+              ? `<span class="bg-rose-600 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full">⚠ ${escapeHtml(item.disaster.type)}</span>`
+              : `<span class="bg-emerald-700 text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full">NORMAL MONITORING</span>`}
+            <span class="mono text-[10px] text-slate-500">${item.lat.toFixed(2)}°, ${item.lon.toFixed(2)}°</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-center">
+            <div class="bg-sky-50 border border-sky-200 rounded-xl p-2.5">
+              <div class="text-[9.5px] font-bold text-sky-700">Temperature</div>
+              <div id="cityLiveTempVal" class="mono font-extrabold text-base text-sky-950">${item.tempC}°C</div>
+            </div>
+            <div class="bg-slate-100 border border-slate-200 rounded-xl p-2.5">
+              <div class="text-[9.5px] font-bold text-slate-600">Surface Wind</div>
+              <div id="cityLiveWindVal" class="mono font-extrabold text-base text-slate-900">— km/h</div>
+            </div>
+          </div>
+          <div id="selectedCityAqiSlot">${renderMsnAqiCard(item.aqi, item.pm25, item.pm10)}</div>
+          ${item.disaster ? `
+            <div class="bg-rose-50 border border-rose-200 rounded-2xl p-3.5 space-y-1.5 text-[11px]">
+              <div class="font-extrabold text-rose-900">Active City Disaster Advisory (${escapeHtml(item.disaster.severity)})</div>
+              <p class="text-rose-950/90 leading-relaxed">${escapeHtml(item.disaster.summary)}</p>
+              <div class="pt-1.5 border-t border-rose-200/70 text-slate-800"><strong>Safety Guidance:</strong> ${escapeHtml(item.disaster.action)}</div>
+            </div>
+          ` : `
+            <div class="bg-white border border-slate-200 rounded-2xl p-3 text-[11px] text-slate-600 leading-relaxed">
+              No active disaster emergency flagged for <strong>${escapeHtml(item.shortName)}</strong>. Displayed as an unmarked city node on the globe to keep disaster alerts visually prominent.
+            </div>
+          `}
+        `;
+
+        // Fetch live Open-Meteo temperature, wind & air quality for this city
+        Promise.all([
+          fetch(`https://api.open-meteo.com/v1/forecast?latitude=${item.lat.toFixed(3)}&longitude=${item.lon.toFixed(3)}&current=temperature_2m,wind_speed_10m`).then(r => r.ok ? r.json() : null).catch(() => null),
+          fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${item.lat.toFixed(3)}&longitude=${item.lon.toFixed(3)}&current=us_aqi,pm2_5,pm10,ozone`).then(r => r.ok ? r.json() : null).catch(() => null)
+        ]).then(([w, aq]) => {
+          if (!selectedItem || selectedItem.id !== item.id) return;
+          if (w?.current?.temperature_2m !== undefined) {
+            item.tempC = Number(w.current.temperature_2m).toFixed(1);
+            const tEl = document.getElementById('cityLiveTempVal');
+            if (tEl) tEl.textContent = `${item.tempC}°C`;
+            const wEl = document.getElementById('cityLiveWindVal');
+            if (wEl) wEl.textContent = `${w.current.wind_speed_10m} km/h`;
+          }
+          if (aq?.current?.us_aqi !== undefined) {
+            item.aqi = Math.round(aq.current.us_aqi);
+            item.pm25 = aq.current.pm2_5;
+            item.pm10 = aq.current.pm10;
+            const slot = document.getElementById('selectedCityAqiSlot');
+            if (slot) slot.innerHTML = renderMsnAqiCard(item.aqi, item.pm25, item.pm10, aq.current.ozone !== undefined ? `O₃: ${aq.current.ozone}` : '');
+          }
+        });
       } else {
-        // Glacier Melt Report
         document.getElementById('inspectorTitle').textContent = item.name;
         document.getElementById('inspectorSubtitle').textContent = 'Cryosphere Melt & Planetary Temperature Rise';
         body.innerHTML = `
@@ -2059,32 +2214,162 @@
       document.getElementById('leftInspector').classList.remove('-translate-x-[120%]');
       document.getElementById('btnOpenLeft').classList.add('hidden');
       document.getElementById('btnBackFeed').classList.remove('hidden');
+      document.getElementById('inspectorTabs').classList.add('hidden');
       document.getElementById('inspectorTitle').textContent = 'Live Coordinate Weather & AQI';
-      document.getElementById('inspectorSubtitle').textContent = `${lat.toFixed(2)}°, ${lon.toFixed(2)}° • Fetching NOAA/ECMWF & AQI...`;
+    let activeFeedTab = 'disasters';
+
+    function switchFeedTab(tab) {
+      activeFeedTab = tab;
+      ['disasters', 'wildfires', 'droughts', 'cities'].forEach(t => {
+        const el = document.getElementById('ftab-' + t);
+        if (!el) return;
+        el.className = (t === tab)
+          ? 'py-1.5 rounded-lg bg-slate-900 text-white cursor-pointer'
+          : 'py-1.5 rounded-lg text-slate-600 hover:bg-slate-200 cursor-pointer';
+      });
+      resetInspectorToFeed();
+    }
+
+    function renderFireCard(f) {
+      const dt = (f.fireC - f.ambientC).toFixed(1);
+      const am = getAqiMeta(f.aqi || 120);
+      const badgeCls = f.risk === 'CRITICAL' ? 'bg-red-600' : 'bg-amber-600';
+      return `
+        <div onclick="quickJump('${f.id}')" class="bg-white hover:border-slate-900 border border-slate-200/90 rounded-2xl p-3 cursor-pointer transition shadow-sm space-y-1.5">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <div class="font-bold text-xs text-slate-900 truncate">${escapeHtml(f.name)}</div>
+              <div class="text-[10px] text-emerald-800 font-semibold truncate">${escapeHtml(f.source || 'NASA VIIRS')} • ${escapeHtml(f.biome)}</div>
+            </div>
+            <span class="${badgeCls} text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shrink-0">FIRE</span>
+          </div>
+          <div class="flex items-center justify-between bg-slate-50 rounded-xl px-2.5 py-1.5 mono text-[10.5px]">
+            <span class="text-red-700 font-bold">Fire ${f.fireC}°C</span>
+            <span class="text-sky-800 font-semibold">Amb ${f.ambientC}°C</span>
+            <span class="font-extrabold" style="color:${am.color}">AQI ${am.aqi}</span>
+          </div>
+          <div class="flex items-center justify-between pt-0.5">
+            <span class="text-[10px] text-slate-400">Caught: ${escapeHtml(f.lastCaught)} • ΔT +${dt}°C</span>
+            <button onclick="event.stopPropagation(); openFireNewsModal('${escapeHtml(f.id)}')" class="text-[10px] font-bold text-red-600 hover:text-red-800 hover:underline cursor-pointer">News &amp; Photo →</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderDroughtCard(d) {
+      const am = getAqiMeta(d.aqi);
+      return `
+        <div onclick="quickJump('${d.id}')" class="bg-white hover:border-amber-700 border border-amber-200 rounded-2xl p-3 cursor-pointer transition shadow-sm space-y-1.5">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <div class="font-bold text-xs text-slate-900 truncate">${escapeHtml(d.name)}</div>
+              <div class="text-[10px] text-amber-800 font-semibold truncate">${escapeHtml(d.agency)} • ${escapeHtml(d.status)}</div>
+            </div>
+            <span class="bg-amber-700 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shrink-0">DROUGHT</span>
+          </div>
+          <div class="flex items-center justify-between bg-amber-50/70 rounded-xl px-2.5 py-1.5 mono text-[10.5px]">
+            <span class="text-amber-900 font-bold">${escapeHtml(d.deficit)}</span>
+            <span class="text-orange-800 font-semibold">${d.tempC}°C</span>
+            <span class="font-extrabold" style="color:${am.color}">AQI ${am.aqi}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderCityCard(c) {
+      const am = getAqiMeta(c.aqi);
+      return `
+        <div onclick="quickJump('${c.id}')" class="bg-white hover:border-slate-900 border ${c.disaster ? 'border-rose-300' : 'border-slate-200/90'} rounded-2xl p-2.5 cursor-pointer transition shadow-sm flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span class="font-bold text-xs text-slate-900 truncate">${escapeHtml(c.shortName)}</span>
+              ${c.disaster ? `<span class="bg-rose-600 text-white text-[8.5px] font-extrabold px-1.5 py-0.5 rounded-full shrink-0">⚠ ${escapeHtml(c.disaster.shortTag)}</span>` : ''}
+            </div>
+            <div class="text-[10px] text-slate-500 truncate">${escapeHtml(c.country)}${c.disaster ? ` • ${escapeHtml(c.disaster.type)}` : ''}</div>
+          </div>
+          <div class="text-right shrink-0 mono">
+            <div class="text-xs font-extrabold text-slate-900">${c.tempC}°C</div>
+            <div class="text-[10px] font-extrabold" style="color:${am.color}">AQI ${am.aqi}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function resetInspectorToFeed() {
+      selectedItem = null;
+      probePoint = null;
+      document.getElementById('btnBackFeed').classList.add('hidden');
+      document.getElementById('inspectorTabs').classList.remove('hidden');
 
       const body = document.getElementById('inspectorBody');
-      body.innerHTML = `<div class="p-4 text-center text-xs text-slate-500">Fetching live weather &amp; MSN-scale AQI from Open-Meteo...</div>`;
+      const disasterCities = worldCities.filter(c => c.disaster);
 
-      let liveTemp = biome.ambientBase;
-      let liveWind = windSpeed;
-      let liveSource = 'Modeled Climatology';
-      let liveAqi = 48;
-      let livePm25 = 11.4;
-      let livePm10 = 22.8;
-      let liveOzone = null;
+      if (activeFeedTab === 'wildfires') {
+        document.getElementById('inspectorTitle').textContent = 'Global Wildfires';
+        document.getElementById('inspectorSubtitle').textContent = `${wildfires.length} active global fire fronts • Labeled on globe`;
+        body.innerHTML = wildfires.map(renderFireCard).join('');
+      } else if (activeFeedTab === 'droughts') {
+        document.getElementById('inspectorTitle').textContent = 'Global Drought Zones';
+        document.getElementById('inspectorSubtitle').textContent = `${droughts.length} worldwide droughts • Labeled on globe`;
+        body.innerHTML = droughts.map(renderDroughtCard).join('');
+      } else if (activeFeedTab === 'cities') {
+        document.getElementById('inspectorTitle').textContent = 'World Cities • Temp & AQI';
+        document.getElementById('inspectorSubtitle').textContent = `${worldCities.length} cities (Disaster cities labeled; others shown as dots)`;
+        body.innerHTML = worldCities.map(renderCityCard).join('');
+      } else {
+        document.getElementById('inspectorTitle').textContent = 'Global Disasters Feed';
+        document.getElementById('inspectorSubtitle').textContent = `${wildfires.length} Wildfires • ${droughts.length} Droughts • ${disasterCities.length} Alert Cities`;
+        body.innerHTML =
+          `<div class="text-[10px] font-extrabold uppercase tracking-wider text-rose-700 px-1 pt-0.5">Cities Facing Disaster (${disasterCities.length})</div>` +
+          disasterCities.map(renderCityCard).join('') +
+          `<div class="text-[10px] font-extrabold uppercase tracking-wider text-amber-800 px-1 pt-2">Global Droughts (${droughts.length})</div>` +
+          droughts.map(renderDroughtCard).join('') +
+          `<div class="text-[10px] font-extrabold uppercase tracking-wider text-red-700 px-1 pt-2">Active Wildfires (${wildfires.length})</div>` +
+          wildfires.map(renderFireCard).join('');
+      }
+    }
 
+    function quickJump(id) {
+      const item = wildfires.find(f => f.id === id)
+        || droughts.find(d => d.id === id)
+        || worldCities.find(c => c.id === id)
+        || glaciers.find(g => g.id === id);
+      if (item) selectItem(item);
+    }
+
+    // Batch-sync live Open-Meteo temperatures & US AQI for world cities in 2 fast requests
+    async function fetchBatchCityWeatherAndAqi() {
       try {
+        const subset = worldCities.slice(0, 28);
+        const lats = subset.map(c => c.lat.toFixed(2)).join(',');
+        const lons = subset.map(c => c.lon.toFixed(2)).join(',');
         const [wRes, aRes] = await Promise.all([
-          fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(3)}&longitude=${lon.toFixed(3)}&current=temperature_2m,wind_speed_10m,wind_direction_10m`),
-          fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat.toFixed(3)}&longitude=${lon.toFixed(3)}&current=us_aqi,pm2_5,pm10,ozone`)
+          fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=temperature_2m`),
+          fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lats}&longitude=${lons}&current=us_aqi,pm2_5,pm10`)
         ]);
         if (wRes.ok) {
-          const d = await wRes.json();
-          if (d?.current?.temperature_2m !== undefined) {
-            liveTemp = d.current.temperature_2m;
-            liveWind = d.current.wind_speed_10m;
-            liveSource = 'Open-Meteo Live (Weather + Air Quality)';
-          }
+          const wd = await wRes.json();
+          const arr = Array.isArray(wd) ? wd : [wd];
+          arr.forEach((row, idx) => {
+            if (subset[idx] && row?.current?.temperature_2m !== undefined) {
+              subset[idx].tempC = Number(row.current.temperature_2m).toFixed(1);
+            }
+          });
+        }
+        if (aRes.ok) {
+          const ad = await aRes.json();
+          const arr = Array.isArray(ad) ? ad : [ad];
+          arr.forEach((row, idx) => {
+            if (subset[idx] && row?.current?.us_aqi !== undefined) {
+              subset[idx].aqi = Math.round(row.current.us_aqi);
+              subset[idx].pm25 = row.current.pm2_5;
+              subset[idx].pm10 = row.current.pm10;
+            }
+          });
+        }
+        if (!selectedItem && !probePoint) resetInspectorToFeed();
+      } catch { /* silent fallback to curated baseline */ }
+    }
         }
         if (aRes.ok) {
           const a = await aRes.json();
@@ -2095,7 +2380,7 @@
             liveOzone = a.current.ozone;
           }
         }
-      } catch { /* fallback to modeled climatology */ }
+      } catch { /* fallback */ }
 
       const ignitionRisk = liveTemp > 30 ? 'ELEVATED' : liveTemp > 20 ? 'MODERATE' : 'LOW';
       const riskColor = ignitionRisk === 'ELEVATED' ? 'bg-red-600' : ignitionRisk === 'MODERATE' ? 'bg-amber-600' : 'bg-emerald-700';
@@ -2119,7 +2404,7 @@
               <div class="mono font-extrabold text-sm text-amber-950">${liveWind} km/h</div>
             </div>
           </div>
-          <div class="text-[11px] text-slate-600 pt-1"><strong>Fuel Profile:</strong> ${biome.fuelRisk}. No active thermal flame spike detected at this exact coordinate.</div>
+          <div class="text-[11px] text-slate-600 pt-1"><strong>Fuel Profile:</strong> ${biome.fuelRisk}. No active thermal flame spike detected here.</div>
         </div>
       `;
     }
@@ -2164,7 +2449,6 @@
       if (item) selectItem(item);
     }
 
-    // Fetch Live Public Government NASA EONET Wildfires
     async function fetchGovOpenData() {
       try {
         const res = await fetch('https://eonet.gsfc.nasa.gov/api/v3/events?category=wildfires&status=open&limit=12');
@@ -2186,7 +2470,8 @@
             source: 'NASA EONET Live',
             name: ev.title,
             shortName: ev.title.split(',')[0].slice(0, 15),
-            lat, lon, fireC, ambientC, frp: 29.4, c_size: 4, hour: 10,
+            lat, lon, fireC, ambientC, frp: 29.4, hour: 10,
+            aqi: 148, pm25: 55.2, pm10: 84.0,
             biome: biome.name,
             risk: 'CRITICAL',
             lastCaught: (geom.date || '').replace('T', ' ').slice(0, 16) + ' UTC',
@@ -2201,23 +2486,20 @@
           document.getElementById('dataBadge').textContent = `Agencies Live (${wildfires.length})`;
           if (!selectedItem && !probePoint) resetInspectorToFeed();
         }
-      } catch { /* silent fallback to curated baseline */ }
+      } catch { /* silent fallback */ }
     }
 
     // =========================================================================
-    // 8. SEARCH BAR, MAP LAYERS, WIND SIMULATOR, 24H TIMELINE & JUDGE TOUR
+    // 8. UI CONTROLS: LAYERS, WIND, TIMELINE, SEARCH BAR, TOUR & HELPLINES
     // =========================================================================
     function toggleLeftInspector(show) {
-      const panel = document.getElementById('leftInspector');
-      const btn = document.getElementById('btnOpenLeft');
-      panel.classList.toggle('-translate-x-[120%]', !show);
-      btn.classList.toggle('hidden', show);
+      document.getElementById('leftInspector').classList.toggle('-translate-x-[120%]', !show);
+      document.getElementById('btnOpenLeft').classList.toggle('hidden', show);
     }
 
     function toggleMapStyle() {
       mapStyle = (mapStyle === 'satellite') ? 'map' : 'satellite';
-      const btn = document.getElementById('btnStyle');
-      btn.textContent = (mapStyle === 'satellite') ? 'Map View' : 'Satellite';
+      document.getElementById('btnStyle').textContent = (mapStyle === 'satellite') ? 'Map View' : 'Satellite';
       globeDirty = true;
     }
 
@@ -2225,6 +2507,8 @@
       layers[key] = !layers[key];
       const mapBtn = {
         dayNight: { id: 'btnDayNight', on: 'bg-indigo-900 text-white shadow-sm' },
+        cities:   { id: 'btnCities',   on: 'bg-slate-800 text-white shadow-sm' },
+        droughts: { id: 'btnDroughts', on: 'bg-amber-700 text-white shadow-sm' },
         aqi:      { id: 'btnAqi',      on: 'bg-teal-700 text-white shadow-sm' },
         warming:  { id: 'btnWarming',  on: 'bg-red-600 text-white shadow-sm' },
         glaciers: { id: 'btnGlaciers', on: 'bg-sky-700 text-white shadow-sm' },
@@ -2233,24 +2517,9 @@
       if (!mapBtn) return;
       const el = document.getElementById(mapBtn.id);
       el.className = layers[key]
-        ? `px-2.5 py-1.5 rounded-lg text-[11px] font-semibold ${mapBtn.on} transition cursor-pointer`
-        : 'px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-500 hover:bg-slate-100 transition cursor-pointer';
+        ? `px-2 py-1.5 rounded-lg text-[11px] font-semibold ${mapBtn.on} transition cursor-pointer`
+        : 'px-2 py-1.5 rounded-lg text-[11px] font-semibold text-slate-500 hover:bg-slate-100 transition cursor-pointer';
       globeDirty = true;
-    }
-
-    function toggleLayer(key) {
-      layers[key] = !layers[key];
-      const mapBtn = {
-        dayNight: { id: 'btnDayNight', on: 'bg-indigo-900 text-white shadow-sm' },
-        warming:  { id: 'btnWarming',  on: 'bg-red-600 text-white shadow-sm' },
-        glaciers: { id: 'btnGlaciers', on: 'bg-sky-700 text-white shadow-sm' },
-        biomes:   { id: 'btnBiomes',   on: 'bg-emerald-800 text-white shadow-sm' }
-      }[key];
-      if (!mapBtn) return;
-      const el = document.getElementById(mapBtn.id);
-      el.className = layers[key]
-        ? `px-2.5 py-1.5 rounded-lg text-[11px] font-semibold ${mapBtn.on} transition cursor-pointer`
-        : 'px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-500 hover:bg-slate-100 transition cursor-pointer';
     }
 
     function updateWindUI() {
@@ -2261,29 +2530,17 @@
       if (speedVal) speedVal.textContent = `${windSpeed} km/h`;
       if (dirVal) dirVal.textContent = `${windDir}° (${comp})`;
       if (badge) badge.textContent = `${comp} • ${windSpeed} km/h`;
-      if (selectedItem && selectedItem.type === 'fire') {
-        selectItem(selectedItem);
-      }
     }
 
-    function setWindSpeed(val) {
-      windSpeed = parseInt(val, 10) || 24;
-      updateWindUI();
-    }
-
-    function setWindDir(val) {
-      windDir = parseInt(val, 10) || 45;
-      updateWindUI();
-    }
+    function setWindSpeed(val) { windSpeed = parseInt(val, 10) || 24; updateWindUI(); }
+    function setWindDir(val) { windDir = parseInt(val, 10) || 45; updateWindUI(); }
 
     function setTimelineHour(val, fromLoop = false) {
       timelineHour = Math.max(0, Math.min(24, val));
       const hh = Math.floor(timelineHour).toString().padStart(2, '0');
       const mm = (timelineHour % 1 >= 0.5) ? '30' : '00';
       const lbl = document.getElementById('timelineHourLabel');
-      if (lbl) {
-        lbl.textContent = (timelineHour >= 24) ? 'Live UTC (24:00)' : `${hh}:${mm} UTC`;
-      }
+      if (lbl) lbl.textContent = (timelineHour >= 24) ? 'Live UTC (24:00)' : `${hh}:${mm} UTC`;
       if (!fromLoop) {
         const slider = document.getElementById('timelineSlider');
         if (slider) slider.value = timelineHour;
@@ -2295,38 +2552,49 @@
       timelinePlaying = !timelinePlaying;
       const btn = document.getElementById('btnPlayTime');
       if (btn) btn.textContent = timelinePlaying ? '❚❚' : '▶';
-      if (timelinePlaying && timelineHour >= 24) {
-        setTimelineHour(0);
-      }
+      if (timelinePlaying && timelineHour >= 24) setTimelineHour(0);
     }
 
-    // Top-Center Interactive Search Bar
     let lastSearchMatches = [];
-
     function handleSearchInput(query) {
       const dd = document.getElementById('searchDropdown');
       const q = (query || '').trim().toLowerCase();
-      const allItems = [...wildfires, ...glaciers];
+      const allItems = [...wildfires, ...droughts, ...worldCities, ...glaciers];
       const matches = q
         ? allItems.filter(it =>
             (it.name || '').toLowerCase().includes(q) ||
             (it.biome || '').toLowerCase().includes(q) ||
-            (it.shortName || '').toLowerCase().includes(q)
+            (it.country || '').toLowerCase().includes(q) ||
+            (it.shortName || '').toLowerCase().includes(q) ||
+            (it.disaster?.type || '').toLowerCase().includes(q)
           )
-        : allItems.slice(0, 7);
+        : [...wildfires.slice(0, 3), ...droughts.slice(0, 2), ...worldCities.slice(0, 4)];
 
       lastSearchMatches = matches;
       if (matches.length === 0) {
-        dd.innerHTML = `<div class="p-3 text-xs text-slate-500">No matching wildfire or glacier found.</div>`;
+        dd.innerHTML = `<div class="p-3 text-xs text-slate-500">No matching city, wildfire, drought, or glacier found.</div>`;
       } else {
-        dd.innerHTML = matches.slice(0, 8).map(it => {
-          const isFire = it.type === 'fire';
-          const tag = isFire
-            ? `<span class="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">${it.fireC}°C</span>`
-            : `<span class="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200">+${it.riseC}°C</span>`;
-          const sub = isFire
-            ? `Last caught: ${escapeHtml(it.lastCaught)} • ${escapeHtml(it.managementGrade)}`
-            : `Glacier retreat: ${escapeHtml(it.retreatRate)}`;
+        dd.innerHTML = matches.slice(0, 10).map(it => {
+          let tag = '';
+          let sub = '';
+          if (it.type === 'fire') {
+            tag = `<span class="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">FIRE ${it.fireC}°C</span>`;
+            sub = `Last caught: ${escapeHtml(it.lastCaught)} • ${escapeHtml(it.managementGrade)}`;
+          } else if (it.type === 'drought') {
+            tag = `<span class="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">DROUGHT</span>`;
+            sub = `${escapeHtml(it.deficit)} • ${it.tempC}°C • ${escapeHtml(it.agency)}`;
+          } else if (it.type === 'city') {
+            const am = getAqiMeta(it.aqi);
+            tag = it.disaster
+              ? `<span class="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-rose-600 text-white">⚠ ${escapeHtml(it.disaster.shortTag)}</span>`
+              : `<span class="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-800">${it.tempC}°C • AQI ${am.aqi}</span>`;
+            sub = it.disaster
+              ? `${it.tempC}°C • AQI ${am.aqi} (${am.label}) • ${escapeHtml(it.disaster.type)}`
+              : `${escapeHtml(it.country)} • Air Quality: ${am.label}`;
+          } else {
+            tag = `<span class="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200">+${it.riseC}°C</span>`;
+            sub = `Glacier retreat: ${escapeHtml(it.retreatRate)}`;
+          }
           return `
             <button onclick="pickSearchItem('${escapeHtml(it.id)}')" class="w-full text-left px-3.5 py-2.5 hover:bg-slate-50 border-b border-slate-100 last:border-none flex items-center justify-between gap-2 cursor-pointer">
               <div class="min-w-0">
@@ -2347,24 +2615,58 @@
     }
 
     function selectFirstSearchResult() {
-      if (lastSearchMatches.length > 0) {
-        pickSearchItem(lastSearchMatches[0].id);
-      }
+      if (lastSearchMatches.length > 0) pickSearchItem(lastSearchMatches[0].id);
     }
 
     document.addEventListener('click', (e) => {
       const dd = document.getElementById('searchDropdown');
       const inp = document.getElementById('globalSearchInput');
-      if (dd && inp && !dd.contains(e.target) && e.target !== inp) {
-        dd.classList.add('hidden');
-      }
+      if (dd && inp && !dd.contains(e.target) && e.target !== inp) dd.classList.add('hidden');
     });
 
-    // Automated 30-Sec Judge Presentation Tour
+    // Sovereign Nation Emergency Helplines
+    const nationHelplines = {
+      IN: { name: 'India', police: '112 / 100', policeTel: '112', fire: '101', fireTel: '101', disaster: '1078', disasterTel: '1078' },
+      US: { name: 'United States', police: '911', policeTel: '911', fire: '911', fireTel: '911', disaster: '1-800-621-3362', disasterTel: '18006213362' },
+      AU: { name: 'Australia', police: '000', policeTel: '000', fire: '000', fireTel: '000', disaster: '132 500', disasterTel: '132500' },
+      CA: { name: 'Canada', police: '911', policeTel: '911', fire: '911', fireTel: '911', disaster: '911', disasterTel: '911' },
+      GB: { name: 'United Kingdom', police: '999 / 112', policeTel: '999', fire: '999', fireTel: '999', disaster: '999', disasterTel: '999' },
+      BR: { name: 'Brazil', police: '190', policeTel: '190', fire: '193', fireTel: '193', disaster: '199', disasterTel: '199' },
+      FR: { name: 'France', police: '17 / 112', policeTel: '17', fire: '18 / 112', fireTel: '18', disaster: '112', disasterTel: '112' },
+      DE: { name: 'Germany', police: '110', policeTel: '110', fire: '112', fireTel: '112', disaster: '112', disasterTel: '112' },
+      GR: { name: 'Greece', police: '100', policeTel: '100', fire: '199 / 112', fireTel: '199', disaster: '112', disasterTel: '112' },
+      ES: { name: 'Spain', police: '091 / 112', policeTel: '112', fire: '080 / 112', fireTel: '112', disaster: '112', disasterTel: '112' },
+      JP: { name: 'Japan', police: '110', policeTel: '110', fire: '119', fireTel: '119', disaster: '171', disasterTel: '171' },
+      RU: { name: 'Russia', police: '102 / 112', policeTel: '112', fire: '101', fireTel: '101', disaster: '112', disasterTel: '112' },
+      ZA: { name: 'South Africa', police: '10111', policeTel: '10111', fire: '10177 / 112', fireTel: '10177', disaster: '112', disasterTel: '112' },
+      ID: { name: 'Indonesia', police: '110', policeTel: '110', fire: '113', fireTel: '113', disaster: '117', disasterTel: '117' }
+    };
+
+    function initRegionHelpline() {
+      const saved = localStorage.getItem('agninet_region') || 'IN';
+      const sel = document.getElementById('regionSelect');
+      if (sel) sel.value = saved;
+      changeRegion(saved, false);
+    }
+
+    function changeRegion(code, notify = true) {
+      const h = nationHelplines[code] || nationHelplines.IN;
+      localStorage.setItem('agninet_region', code);
+      document.getElementById('hlNationLabel').textContent = `${h.name} Emergency:`;
+      const p = document.getElementById('hlPoliceLink');
+      p.textContent = `Police: ${h.police}`; p.href = `tel:${h.policeTel}`;
+      const f = document.getElementById('hlFireLink');
+      f.textContent = `Fire: ${h.fire}`; f.href = `tel:${h.fireTel}`;
+      const d = document.getElementById('hlDisasterLink');
+      d.textContent = `Disaster: ${h.disaster}`; d.href = `tel:${h.disasterTel}`;
+      if (notify) showToast(`Emergency helplines updated for ${h.name}`);
+    }
+
+    // Judge Auto-Tour
     let tourTimer = null;
     let tourStep = 0;
     const tourStops = [
-      { id: 'pir-panjal', caption: '1/4 • Pir Panjal, J&K: Cool 16.2°C Himalayan ground vs 73.4°C active flame core (ΔT +57.2°C).' },
+      { id: 'pir-panjal', caption: '1/4 • Pir Panjal, J&K: Cool 16.2°C Himalayan ground vs 73.4°C flame core (ΔT +57.2°C, AQI 142).' },
       { id: 'bastar', caption: '2/4 • Bastar Forest, India: Intense 85.8°C deciduous fire front with 6-hour wind spread simulation.' },
       { id: 'gangotri', caption: '3/4 • Gangotri Glacier: +1.85°C Himalayan warming retreating 22m/year — threatening Ganga headwaters.' },
       { id: 'amazon-para', caption: '4/4 • Amazon Basin, Brazil: Global wildfire monitoring synced with GFMH, WMO, GFMC, ICDO & WHO.' }
@@ -2383,7 +2685,6 @@
       tourStep = 0;
       banner.classList.remove('hidden');
       btn.className = 'px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-emerald-700 text-white shadow-sm transition cursor-pointer';
-
       const runStop = () => {
         const stop = tourStops[tourStep % tourStops.length];
         document.getElementById('tourCaption').textContent = stop.caption;
@@ -2395,7 +2696,492 @@
     }
 
     // =========================================================================
-    // 11B. MULTI-HAZARD PREDICTION CENTER (SUDDEN FLOOD, USGS QUAKE, DROUGHT)
+    // 9. GEMINI API HELPER, SAFETY MODAL, REAL-LIFE NEWS+PHOTO & CLIMATE AI
+    // =========================================================================
+    const geminiApiKey = "";
+
+    async function callGeminiWithRetry(model, payload, retries = 3) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiApiKey}`;
+      for (let i = 0; i < retries; i++) {
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (res.ok) return await res.json();
+          if (res.status === 429 || res.status >= 500) {
+            await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));
+            continue;
+          }
+          return null;
+        } catch {
+          await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));
+        }
+      }
+      return null;
+    }
+
+    function openSafetyModal(tab = 'who') {
+      document.getElementById('safetyModal').classList.remove('hidden');
+      switchSafetyTab(tab);
+    }
+    function closeSafetyModal() { document.getElementById('safetyModal').classList.add('hidden'); }
+    function switchSafetyTab(tab) {
+      ['who', 'icdo', 'agencies'].forEach(t => {
+        document.getElementById('spanel-' + t).classList.toggle('hidden', t !== tab);
+        document.getElementById('stab-' + t).className = (t === tab)
+          ? 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#1a73e8] text-white cursor-pointer shrink-0'
+          : 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-200 text-slate-700 hover:bg-slate-300 cursor-pointer shrink-0';
+      });
+    }
+
+    // Real-Life Wildfire News & Field Photo Modal
+    async function openFireNewsModal(fireId) {
+      const item = wildfires.find(f => f.id === fireId);
+      if (!item) return;
+      document.getElementById('fireNewsModal').classList.remove('hidden');
+      document.getElementById('fnModalTitle').textContent = item.name;
+      document.getElementById('fnModalSubtitle').textContent = `${item.biome} • ${item.source || 'NASA VIIRS'}`;
+
+      const dt = (item.fireC - item.ambientC).toFixed(1);
+      const am = getAqiMeta(item.aqi || 135);
+      document.getElementById('fnStatsStrip').innerHTML = `
+        <div class="bg-red-50 border border-red-200 rounded-xl p-2"><div class="text-[9.5px] font-bold text-red-700">Flame Peak (T4)</div><div class="mono font-extrabold text-sm text-red-900">${item.fireC}°C (+${dt}°C)</div></div>
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-2"><div class="text-[9.5px] font-bold text-amber-800">MSN AQI Forecast</div><div class="mono font-extrabold text-sm" style="color:${am.color}">${am.aqi} (${am.label})</div></div>
+        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-2"><div class="text-[9.5px] font-bold text-emerald-800">Containment</div><div class="mono font-extrabold text-sm text-emerald-950">${item.containmentPct}% • ${escapeHtml(item.managementGrade)}</div></div>
+      `;
+
+      const imgEl = document.getElementById('fnPhotoImg');
+      const loaderEl = document.getElementById('fnPhotoLoader');
+      const capEl = document.getElementById('fnPhotoCaption');
+      imgEl.classList.add('hidden');
+      capEl.classList.add('hidden');
+      loaderEl.classList.remove('hidden');
+
+      document.getElementById('fnNewsBody').textContent = `Searching verified news reports and ground impact for ${item.name}...`;
+      document.getElementById('fnNewsSources').innerHTML = '';
+
+      // 1. Live Google-Search-Grounded News Dispatch
+      callGeminiWithRetry('gemini-3-flash-preview', {
+        contents: [{ parts: [{ text: `Provide a concise, factual 4-sentence news briefing on recent wildfire activity, ecological damage, smoke impact, and firefighting efforts in ${item.name} (${item.biome}).` }] }],
+        tools: [{ google_search: {} }],
+        systemInstruction: { parts: [{ text: 'You are an official international wildfire news correspondent citing GFMH, WMO, GFMC, ICDO, WHO, and national news agencies. Be factual, concise, and clear.' }] }
+      }).then(res => {
+        const cand = res?.candidates?.[0];
+        const txt = cand?.content?.parts?.[0]?.text;
+        document.getElementById('fnNewsBody').textContent = txt || `${item.name} (${item.biome}): ${item.managementNotes} Active thermal anomaly measured at ${item.fireC}°C against ${item.ambientC}°C ambient ground temperature with AQI ${am.aqi}.`;
+        const attrs = cand?.groundingMetadata?.groundingAttributions || [];
+        const links = attrs.filter(a => a.web?.uri && a.web?.title).slice(0, 4);
+        if (links.length > 0) {
+          document.getElementById('fnNewsSources').innerHTML = `<div class="text-[10px] font-bold text-slate-500">Verified Sources:</div>` +
+            links.map(l => `<a href="${escapeHtml(l.web.uri)}" target="_blank" rel="noopener" class="block text-[10.5px] font-semibold text-[#1a73e8] hover:underline truncate">↗ ${escapeHtml(l.web.title)}</a>`).join('');
+        }
+      });
+
+      // 2. Realistic Documentary Visual via gemini-3.1-flash-lite-image
+      callGeminiWithRetry('gemini-3.1-flash-lite-image', {
+        contents: [{ parts: [{ text: `Photojournalistic wide-angle documentary photograph of a dramatic forest wildfire in ${item.name}, ${item.biome}, glowing orange flames and dense smoke plumes rising over trees at twilight, realistic news photography, no text or watermarks` }] }],
+        generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
+      }).then(res => {
+        const b64 = res?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+        loaderEl.classList.add('hidden');
+        if (b64) {
+          imgEl.src = `data:image/png;base64,${b64}`;
+          imgEl.classList.remove('hidden');
+          capEl.textContent = `Visual Field Reconstruction — ${item.name} (${item.biome})`;
+          capEl.classList.remove('hidden');
+        } else {
+          loaderEl.innerHTML = `<div class="text-xs text-slate-300 font-medium px-4">Live visual generator unavailable offline. Telemetry: ${item.fireC}°C Fire Core • ${item.frp} MW Radiative Power.</div>`;
+          loaderEl.classList.remove('hidden');
+        }
+      });
+    }
+
+    function closeFireNewsModal() { document.getElementById('fireNewsModal').classList.add('hidden'); }
+
+    // Bottom-Right Floating Climate AI Chatbot
+    function toggleAiChatbot(force) {
+      const win = document.getElementById('aiChatWindow');
+      const show = (typeof force === 'boolean') ? force : win.classList.contains('hidden');
+      win.classList.toggle('hidden', !show);
+      if (show) document.getElementById('aiChatInput').focus();
+    }
+
+    function askQuickClimateQuestion(q) {
+      document.getElementById('aiChatInput').value = q;
+      sendAiClimateMessage({ preventDefault: () => {} });
+    }
+
+    async function sendAiClimateMessage(e) {
+      e.preventDefault();
+      const inp = document.getElementById('aiChatInput');
+      const q = inp.value.trim();
+      if (!q) return;
+      inp.value = '';
+
+      const box = document.getElementById('aiChatMessages');
+      box.innerHTML += `<div class="flex justify-end"><div class="bg-slate-900 text-white rounded-2xl rounded-br-sm px-3 py-2 max-w-[85%] leading-relaxed">${escapeHtml(q)}</div></div>`;
+      const loadId = 'ai-load-' + Date.now();
+      box.innerHTML += `<div id="${loadId}" class="bg-white border border-slate-200 rounded-2xl rounded-bl-sm p-3 text-slate-500 italic">Searching climate intelligence...</div>`;
+      box.scrollTop = box.scrollHeight;
+
+      const res = await callGeminiWithRetry('gemini-3-flash-preview', {
+        contents: [{ parts: [{ text: q }] }],
+        tools: [{ google_search: {} }],
+        systemInstruction: { parts: [{ text: 'You are AgniNet Climate AI, an authoritative UN SDG 13, wildfire, AQI, glacier melt, and WHO/ICDO safety assistant. Give clear, concise, factual answers in 3-5 sentences.' }] }
+      });
+
+      const cand = res?.candidates?.[0];
+      const txt = cand?.content?.parts?.[0]?.text || 'I am currently in offline mode. For immediate wildfire safety, follow WHO (N95/FFP2 masks, sealed clean-air room) and ICDO (early evacuation, shut off gas mains) protocols.';
+      const attrs = (cand?.groundingMetadata?.groundingAttributions || []).filter(a => a.web?.uri && a.web?.title).slice(0, 3);
+      const srcHtml = attrs.length
+        ? `<div class="mt-2 pt-1.5 border-t border-slate-100 space-y-0.5">${attrs.map(a => `<a href="${escapeHtml(a.web.uri)}" target="_blank" rel="noopener" class="block text-[10px] font-semibold text-[#1a73e8] hover:underline truncate">↗ ${escapeHtml(a.web.title)}</a>`).join('')}</div>`
+        : '';
+
+      const el = document.getElementById(loadId);
+      if (el) {
+        el.className = 'bg-white border border-slate-200 rounded-2xl rounded-bl-sm p-3 text-slate-700 leading-relaxed shadow-sm whitespace-pre-wrap';
+        el.innerHTML = `${escapeHtml(txt)}${srcHtml}`;
+      }
+      box.scrollTop = box.scrollHeight;
+    }
+
+    // =========================================================================
+    // 10. GMAIL SIGN-IN & BOT-FREE SDG 13 CLIMATE GROUPS + AI WILDFIRE NEWSROOM
+    // =========================================================================
+    let currentUser = null;
+    let activeGroupTab = 'ainews';
+    let activePrivateGroupId = null;
+
+    let worldMsgs = [];
+    let climateIdeas = [];
+    let privateGroups = [];
+    let aiNewsItems = [];
+
+    function initAuthAndGroups() {
+      try {
+        currentUser = JSON.parse(localStorage.getItem('agninet_user') || 'null');
+        worldMsgs = JSON.parse(localStorage.getItem('agninet_world_msgs') || '[]');
+        climateIdeas = JSON.parse(localStorage.getItem('agninet_ideas') || '[]');
+        privateGroups = JSON.parse(localStorage.getItem('agninet_private_groups') || '[]');
+      } catch { /* clean empty state */ }
+      updateAuthUI();
+      renderWorldChat();
+      renderIdeasList();
+      renderPrivateLobby();
+    }
+
+    function updateAuthUI() {
+      const topLbl = document.getElementById('authTopLabel');
+      const status = document.getElementById('groupsUserStatus');
+      const signedBox = document.getElementById('authSignedInBox');
+      const form = document.getElementById('authForm');
+
+      if (currentUser) {
+        topLbl.textContent = currentUser.name;
+        status.textContent = `Signed in as ${currentUser.name} (${currentUser.email})`;
+        document.getElementById('authCurrentName').textContent = currentUser.name;
+        document.getElementById('authCurrentEmail').textContent = currentUser.email;
+        signedBox.classList.remove('hidden');
+        form.classList.add('hidden');
+      } else {
+        topLbl.textContent = 'Sign In';
+        status.textContent = 'Sign in with Gmail to post & create groups';
+        signedBox.classList.add('hidden');
+        form.classList.remove('hidden');
+      }
+    }
+
+    function openAuthModal() { document.getElementById('authModal').classList.remove('hidden'); }
+    function closeAuthModal() { document.getElementById('authModal').classList.add('hidden'); }
+
+    function handleGmailSignIn(e) {
+      e.preventDefault();
+      const name = document.getElementById('authNameInput').value.trim();
+      const email = document.getElementById('authEmailInput').value.trim().toLowerCase();
+      const pass = document.getElementById('authPassInput').value;
+      const err = document.getElementById('authErrorMsg');
+
+      if (!email.endsWith('@gmail.com') && !email.endsWith('@googlemail.com')) {
+        err.textContent = 'Please enter a valid @gmail.com email address.';
+        err.classList.remove('hidden');
+        return;
+      }
+      if (pass.length < 4) {
+        err.textContent = 'Password must be at least 4 characters.';
+        err.classList.remove('hidden');
+        return;
+      }
+      err.classList.add('hidden');
+      currentUser = { name, email };
+      localStorage.setItem('agninet_user', JSON.stringify(currentUser));
+      updateAuthUI();
+      closeAuthModal();
+      showToast(`Signed in as ${name}`);
+    }
+
+    function signOutGmail() {
+      currentUser = null;
+      localStorage.removeItem('agninet_user');
+      updateAuthUI();
+      closeAuthModal();
+      showToast('Signed out');
+    }
+
+    function requireSignIn() {
+      if (!currentUser) {
+        openAuthModal();
+        showToast('Please sign in with your Gmail account first');
+        return false;
+      }
+      return true;
+    }
+
+    function toggleGroupsDrawer(show) {
+      document.getElementById('groupsDrawer').classList.toggle('translate-x-[120%]', !show);
+    }
+
+    function switchGroupTab(tab) {
+      activeGroupTab = tab;
+      ['ainews', 'world', 'ideas', 'private'].forEach(t => {
+        document.getElementById('gpanel-' + t).classList.toggle('hidden', t !== tab);
+        document.getElementById('gtab-' + t).className = (t === tab)
+          ? 'py-1.5 rounded-xl bg-slate-900 text-white cursor-pointer'
+          : 'py-1.5 rounded-xl text-slate-600 hover:bg-slate-200 cursor-pointer';
+      });
+    }
+
+    // AI Global Wildfire Newsroom
+    async function fetchAiWildfireNewsGroup(userTriggered = false) {
+      const list = document.getElementById('aiNewsList');
+      if (userTriggered || aiNewsItems.length === 0) {
+        list.innerHTML = `<div class="p-6 text-center text-xs text-slate-500">Scanning global news &amp; GFMH / WMO / GFMC / ICDO / WHO feeds...</div>`;
+      }
+      const res = await callGeminiWithRetry('gemini-3-flash-preview', {
+        contents: [{ parts: [{ text: 'Find 4 major recent or active wildfires around the world across different countries. Return ONLY a JSON array of objects with keys: title, country, summary, agency, lat, lon, tip.' }] }],
+        tools: [{ google_search: {} }],
+        generationConfig: { responseMimeType: 'application/json' }
+      });
+
+      let parsed = null;
+      try {
+        const txt = res?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (txt) parsed = JSON.parse(txt);
+      } catch { parsed = null; }
+
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        aiNewsItems = parsed;
+      } else {
+        aiNewsItems = wildfires.slice(0, 4).map(f => ({
+          title: `${f.name} — Active Thermal Front (${f.fireC}°C)`,
+          country: f.name.split(',').pop().trim(),
+          summary: f.managementNotes,
+          agency: f.source || 'GFMH • WMO • GFMC',
+          lat: f.lat,
+          lon: f.lon,
+          tip: 'WHO/ICDO: Wear N95/FFP2 masks outdoors and keep windows sealed.'
+        }));
+      }
+
+      list.innerHTML = aiNewsItems.map(n => `
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm space-y-1.5">
+          <div class="flex items-start justify-between gap-2">
+            <span class="text-[9.5px] font-extrabold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">${escapeHtml(n.agency || 'Global News')}</span>
+            <button onclick="flyTo(${Number(n.lon) || 80.5}, ${Number(n.lat) || 22.5}, 2.6); toggleGroupsDrawer(false);" class="text-[10px] font-bold text-[#1a73e8] hover:underline cursor-pointer shrink-0">Locate →</button>
+          </div>
+          <div class="font-bold text-xs text-slate-900">${escapeHtml(n.title)}</div>
+          <p class="text-[11px] text-slate-600 leading-relaxed">${escapeHtml(n.summary)}</p>
+          <div class="text-[10px] bg-blue-50 text-blue-900 rounded-lg px-2.5 py-1.5 font-medium">${escapeHtml(n.tip || 'WHO/ICDO: Follow local evacuation & PM2.5 smoke advisories.')}</div>
+        </div>
+      `).join('');
+    }
+
+    // World SDG 13 Chat (Bot-Free)
+    function renderWorldChat() {
+      const box = document.getElementById('worldChatMessages');
+      if (worldMsgs.length === 0) {
+        box.innerHTML = `<div class="h-full flex flex-col items-center justify-center text-center px-6 py-12 text-slate-400 text-xs">No messages yet. Start the global UN SDG 13 Climate Action conversation!</div>`;
+        return;
+      }
+      box.innerHTML = worldMsgs.map(m => `
+        <div class="bg-white border border-slate-200 rounded-2xl p-3 space-y-1 shadow-sm">
+          <div class="flex items-center justify-between text-[10px]">
+            <span class="font-bold text-slate-900">${escapeHtml(m.author)}</span>
+            <span class="text-slate-400 mono">${escapeHtml(m.time)}</span>
+          </div>
+          <div class="text-xs text-slate-700 leading-relaxed">${escapeHtml(m.text)}</div>
+        </div>
+      `).join('');
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function postWorldMessage(e) {
+      e.preventDefault();
+      if (!requireSignIn()) return;
+      const inp = document.getElementById('worldChatInput');
+      const text = inp.value.trim();
+      if (!text) return;
+      inp.value = '';
+      worldMsgs.push({ author: currentUser.name, email: currentUser.email, text, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+      localStorage.setItem('agninet_world_msgs', JSON.stringify(worldMsgs));
+      renderWorldChat();
+    }
+
+    // Climate Ideas & Projects (Bot-Free)
+    function renderIdeasList() {
+      const box = document.getElementById('ideasList');
+      if (climateIdeas.length === 0) {
+        box.innerHTML = `<div class="text-center px-6 py-10 text-slate-400 text-xs">No climate projects published yet. Share your first SDG 13 solution above!</div>`;
+        return;
+      }
+      box.innerHTML = climateIdeas.map((it, idx) => `
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 space-y-1.5 shadow-sm">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[9.5px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">${escapeHtml(it.category)}</span>
+            <button onclick="upvoteIdea(${idx})" class="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-emerald-100 text-[10.5px] font-bold text-slate-800 cursor-pointer">▲ ${it.votes}</button>
+          </div>
+          <div class="font-bold text-xs text-slate-900">${escapeHtml(it.title)}</div>
+          <p class="text-[11px] text-slate-600 leading-relaxed">${escapeHtml(it.desc)}</p>
+          <div class="text-[10px] text-slate-400">By ${escapeHtml(it.author)}</div>
+        </div>
+      `).join('');
+    }
+
+    function postClimateIdea(e) {
+      e.preventDefault();
+      if (!requireSignIn()) return;
+      const title = document.getElementById('ideaTitleInput').value.trim();
+      const category = document.getElementById('ideaCategoryInput').value;
+      const desc = document.getElementById('ideaDescInput').value.trim();
+      if (!title || !desc) return;
+      climateIdeas.unshift({ title, category, desc, author: currentUser.name, votes: 1 });
+      localStorage.setItem('agninet_ideas', JSON.stringify(climateIdeas));
+      document.getElementById('ideaTitleInput').value = '';
+      document.getElementById('ideaDescInput').value = '';
+      renderIdeasList();
+      showToast('Climate project published!');
+    }
+
+    function upvoteIdea(idx) {
+      if (!climateIdeas[idx]) return;
+      climateIdeas[idx].votes += 1;
+      localStorage.setItem('agninet_ideas', JSON.stringify(climateIdeas));
+      renderIdeasList();
+    }
+
+    // Private Climate Groups (Bot-Free)
+    function renderPrivateLobby() {
+      const box = document.getElementById('myPrivateGroupsList');
+      if (privateGroups.length === 0) {
+        box.innerHTML = `<div class="text-center px-4 py-6 text-slate-400 text-xs">You haven't created or joined any private groups yet.</div>`;
+        return;
+      }
+      box.innerHTML = privateGroups.map(g => `
+        <div onclick="openPrivateRoom('${escapeHtml(g.id)}')" class="bg-white hover:border-slate-900 border border-slate-200 rounded-2xl p-3 flex items-center justify-between cursor-pointer transition">
+          <div>
+            <div class="font-bold text-xs text-slate-900">${escapeHtml(g.name)}</div>
+            <div class="mono text-[10px] text-emerald-700 font-bold">Code: ${escapeHtml(g.code)} • ${g.messages.length} msgs</div>
+          </div>
+          <span class="text-xs font-bold text-slate-400">→</span>
+        </div>
+      `).join('');
+    }
+
+    function createPrivateGroup(e) {
+      e.preventDefault();
+      if (!requireSignIn()) return;
+      const name = document.getElementById('newGroupNameInput').value.trim();
+      if (!name) return;
+      const code = 'ECO-' + Math.floor(1000 + Math.random() * 9000);
+      const grp = { id: 'grp-' + Date.now(), name, code, messages: [] };
+      privateGroups.unshift(grp);
+      localStorage.setItem('agninet_private_groups', JSON.stringify(privateGroups));
+      document.getElementById('newGroupNameInput').value = '';
+      renderPrivateLobby();
+      openPrivateRoom(grp.id);
+      showToast(`Private group created • Code: ${code}`);
+    }
+
+    function joinPrivateGroup(e) {
+      e.preventDefault();
+      if (!requireSignIn()) return;
+      const code = document.getElementById('joinGroupCodeInput').value.trim().toUpperCase();
+      const found = privateGroups.find(g => g.code === code);
+      if (found) {
+        openPrivateRoom(found.id);
+      } else {
+        const grp = { id: 'grp-' + Date.now(), name: `Climate Room ${code}`, code, messages: [] };
+        privateGroups.unshift(grp);
+        localStorage.setItem('agninet_private_groups', JSON.stringify(privateGroups));
+        renderPrivateLobby();
+        openPrivateRoom(grp.id);
+      }
+      document.getElementById('joinGroupCodeInput').value = '';
+    }
+
+    function openPrivateRoom(id) {
+      const grp = privateGroups.find(g => g.id === id);
+      if (!grp) return;
+      activePrivateGroupId = id;
+      document.getElementById('privateLobby').classList.add('hidden');
+      document.getElementById('privateRoomView').classList.remove('hidden');
+      document.getElementById('activePrivName').textContent = grp.name;
+      document.getElementById('activePrivCode').textContent = `Invite Code: ${grp.code}`;
+      renderPrivateMessages();
+    }
+
+    function leavePrivateRoomView() {
+      activePrivateGroupId = null;
+      document.getElementById('privateRoomView').classList.add('hidden');
+      document.getElementById('privateLobby').classList.remove('hidden');
+      renderPrivateLobby();
+    }
+
+    function copyActiveGroupCode() {
+      const grp = privateGroups.find(g => g.id === activePrivateGroupId);
+      if (!grp) return;
+      const ta = document.createElement('textarea');
+      ta.value = grp.code;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast(`Copied invite code ${grp.code}`);
+    }
+
+    function renderPrivateMessages() {
+      const grp = privateGroups.find(g => g.id === activePrivateGroupId);
+      const box = document.getElementById('privateChatMessages');
+      if (!grp || grp.messages.length === 0) {
+        box.innerHTML = `<div class="text-center py-10 text-xs text-slate-400">Private room is empty. Say hello!</div>`;
+        return;
+      }
+      box.innerHTML = grp.messages.map(m => `
+        <div class="bg-white border border-slate-200 rounded-2xl p-3 space-y-1">
+          <div class="flex justify-between text-[10px]"><span class="font-bold text-slate-900">${escapeHtml(m.author)}</span><span class="mono text-slate-400">${escapeHtml(m.time)}</span></div>
+          <div class="text-xs text-slate-700">${escapeHtml(m.text)}</div>
+        </div>
+      `).join('');
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function postPrivateMessage(e) {
+      e.preventDefault();
+      if (!requireSignIn()) return;
+      const grp = privateGroups.find(g => g.id === activePrivateGroupId);
+      if (!grp) return;
+      const inp = document.getElementById('privateChatInput');
+      const text = inp.value.trim();
+      if (!text) return;
+      inp.value = '';
+      grp.messages.push({ author: currentUser.name, text, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+      localStorage.setItem('agninet_private_groups', JSON.stringify(privateGroups));
+      renderPrivateMessages();
+    }
+
+    // =========================================================================
+    // 11. MULTI-HAZARD PREDICTION CENTER (SUDDEN FLOOD, USGS QUAKE, DROUGHT)
     // =========================================================================
     let activeHazardTab = 'all';
     const hazardPredictions = [
@@ -2404,7 +3190,7 @@
         title: 'Brahmaputra Basin Sudden Flash Flood Watch',
         region: 'Assam & Arunachal Foothills, India', lat: 26.75, lon: 93.45,
         probability: '78% (Next 48h)', source: 'WMO Hydrological / CWC Watch',
-        detail: 'Intense orographic rainfall combined with glacial meltwater inflow is pushing upper tributary levels near danger marks. Low-lying floodplains advised to prepare.',
+        detail: 'Intense orographic rainfall combined with glacial meltwater inflow is pushing upper tributary levels near danger marks.',
         precaution: 'Move livestock and documents to higher ground; avoid crossing fast-flowing nullahs or submerged bridges.'
       },
       {
@@ -2412,40 +3198,24 @@
         title: 'Himalayan Cloudburst & GLOF Risk Corridor',
         region: 'Chamoli & Rudraprayag, Uttarakhand, India', lat: 30.42, lon: 79.32,
         probability: '71% (Next 36h)', source: 'NDMA / Glacial Lake Monitor',
-        detail: 'Rapid thermal ablation above 4,200m and steep valley convective bursts elevate sudden flash-flood and landslide risk along Alaknanda tributaries.',
+        detail: 'Rapid thermal ablation above 4,200m and steep valley convective bursts elevate sudden flash-flood and landslide risk.',
         precaution: 'Stay away from riverbanks during heavy upslope rain and follow district disaster SMS alerts.'
-      },
-      {
-        id: 'haz-flood-bangla', category: 'flood', severity: 'MODERATE',
-        title: 'Meghna–Sylhet Delta Sudden Inundation Risk',
-        region: 'Sylhet & Coastal Bay of Bengal', lat: 24.89, lon: 91.87,
-        probability: '64% (Next 72h)', source: 'FFWC / WMO Monsoon Model',
-        detail: 'Upstream monsoon surge and spring-tide backwater effects increase sudden urban and agricultural drainage flooding probability.',
-        precaution: 'Keep emergency drinking water, dry rations, and charged power banks ready.'
       },
       {
         id: 'haz-drought-deccan', category: 'drought', severity: 'HIGH',
         title: 'Deccan & Marathwada Severe Soil-Moisture Deficit',
         region: 'Maharashtra & North Karnataka, India', lat: 19.15, lon: 76.25,
         probability: '82% (30-Day Outlook)', source: 'IMD / WMO Drought Index',
-        detail: 'Prolonged rainfall deficit (-38% vs seasonal normal) and elevated daytime heat (+2.4°C anomaly) are depleting shallow aquifers and crop root-zone moisture.',
-        precaution: 'Prioritize micro-irrigation, community water conservation, and heat-stress protection between 12:00–16:00.'
+        detail: 'Prolonged rainfall deficit (-38% vs normal) and elevated daytime heat (+2.4°C anomaly) are depleting shallow aquifers.',
+        precaution: 'Prioritize micro-irrigation, water conservation, and heat-stress protection between 12:00–16:00.'
       },
       {
         id: 'haz-drought-amazon', category: 'drought', severity: 'CRITICAL',
         title: 'Amazon Basin Exceptional Hydrological Drought',
         region: 'Pará & Amazonas, Brazil', lat: -4.25, lon: -61.50,
         probability: '89% (Ongoing)', source: 'WMO / CEMADEN Monitor',
-        detail: 'Historic low river levels across Madeira and Rio Negro tributaries are accelerating understory desiccation and compounding wildfire risk.',
+        detail: 'Historic low river levels across Madeira and Rio Negro tributaries are accelerating understory desiccation and wildfire risk.',
         precaution: 'Monitor local water supply advisories and strictly prohibit agricultural clearing burns.'
-      },
-      {
-        id: 'haz-drought-sahel', category: 'drought', severity: 'HIGH',
-        title: 'Sub-Saharan Sahel Agricultural Drought & Heat',
-        region: 'Sahel Belt, West & Central Africa', lat: 14.50, lon: 8.20,
-        probability: '79% (60-Day Outlook)', source: 'FAO GIEWS / WMO',
-        detail: 'Persistent +2.0°C warming anomaly and delayed convective rains are stressing pastoral water reserves and rain-fed grain harvests.',
-        precaution: 'Activate community water-sharing protocols and heatwave hydration guidelines.'
       }
     ];
 
@@ -2489,9 +3259,7 @@
       if (liveUsgsQuakes.length === 0) fetchLiveUsgsEarthquakes(false);
     }
 
-    function closeHazardModal() {
-      document.getElementById('hazardModal').classList.add('hidden');
-    }
+    function closeHazardModal() { document.getElementById('hazardModal').classList.add('hidden'); }
 
     function switchHazardTab(tab) {
       activeHazardTab = tab;
@@ -2530,11 +3298,6 @@
       const body = document.getElementById('hazardListBody');
       if (!body) return;
 
-      if (list.length === 0) {
-        body.innerHTML = `<div class="text-center text-xs text-slate-500 py-10">Syncing live hazard feeds...</div>`;
-        return;
-      }
-
       body.innerHTML = list.map(h => {
         const catMeta = h.category === 'flood'
           ? { label: 'SUDDEN FLOOD', cls: 'bg-sky-700 text-white' }
@@ -2566,10 +3329,7 @@
     }
 
     // =========================================================================
-    // 11C. ECO-EARTH BOTANICAL ASSEMBLY INTRO ANIMATION (60FPS -> TRANSPARENT)
-    //      Inspired by eco-earth-greenery.jpg: emerald moss continents, deep
-    //      sapphire oceans, cloud wisps & botanical bokeh assembling into a
-    //      living globe once, then dissolving cleanly to transparent.
+    // 12. ECO-EARTH BOTANICAL ASSEMBLY INTRO ANIMATION (60FPS -> TRANSPARENT)
     // =========================================================================
     let introDone = false;
     let introRaf = null;
@@ -2581,7 +3341,7 @@
       const overlay = document.getElementById('ecoIntroOverlay');
       if (overlay) {
         overlay.classList.add('intro-fade-out');
-        setTimeout(() => overlay.remove(), 1200);
+        setTimeout(() => overlay.remove(), 1150);
       }
     }
 
@@ -2604,31 +3364,25 @@
       const cy = ih * 0.44;
       const R = Math.min(iw, ih) * 0.175;
 
-      // Soft surrounding botanical moss bokeh orbs (matching eco-earth-greenery.jpg depth-of-field)
-      const bokeh = Array.from({ length: 26 }, (_, i) => {
-        const ang = (i / 26) * Math.PI * 2 + Math.random() * 0.4;
+      const bokeh = Array.from({ length: 24 }, (_, i) => {
+        const ang = (i / 24) * Math.PI * 2 + Math.random() * 0.4;
         const dist = R * (1.35 + Math.random() * 1.45);
         return {
           x: cx + Math.cos(ang) * dist,
           y: cy + Math.sin(ang) * dist * 0.85,
-          r: 22 + Math.random() * 58,
+          r: 22 + Math.random() * 54,
           col: i % 3 === 0 ? 'rgba(101, 163, 13, 0.14)' : i % 3 === 1 ? 'rgba(21, 128, 61, 0.16)' : 'rgba(6, 78, 59, 0.22)'
         };
       });
 
-      // Living Earth particles: mossy emerald continents + sapphire ocean + swirling clouds
-      const count = 420;
       const particles = [];
-      for (let i = 0; i < count; i++) {
-        // Fibonacci sphere distribution on front hemisphere
+      for (let i = 0; i < 400; i++) {
         const u = Math.random() * 2 - 1;
         const theta = Math.random() * Math.PI * 2;
         const s = Math.sqrt(1 - u * u);
         const sx = s * Math.cos(theta);
         const sy = u;
-        const sz = Math.abs(s * Math.sin(theta)); // Front-facing hemisphere
-
-        // Procedural organic moss-continent pattern (Americas / Eurasia lush clusters)
+        const sz = Math.abs(s * Math.sin(theta));
         const noise = Math.sin(sx * 3.1 + 0.6) * Math.cos(sy * 2.8 - 0.3) + Math.sin((sx + sy) * 4.2) * 0.38;
         let kind = 'ocean';
         if (noise > 0.12) kind = 'moss';
@@ -2642,9 +3396,9 @@
         particles.push({
           ox: cx + Math.cos(scatterAng) * scatterDist,
           oy: cy + Math.sin(scatterAng) * scatterDist,
-          tx, ty, sz, kind,
-          size: kind === 'moss' ? (2.2 + Math.random() * 2.8) : kind === 'cloud' ? (2.8 + Math.random() * 3.4) : (1.8 + Math.random() * 2.0),
-          delay: Math.random() * 0.26,
+          tx, ty, sz,
+          size: kind === 'moss' ? (2.2 + Math.random() * 2.8) : kind === 'cloud' ? (2.8 + Math.random() * 3.2) : (1.8 + Math.random() * 2.0),
+          delay: Math.random() * 0.25,
           color: kind === 'moss'
             ? (Math.random() > 0.45 ? '#65a30d' : '#16a34a')
             : kind === 'cloud'
@@ -2654,8 +3408,8 @@
       }
 
       const startMs = performance.now();
-      const assembleMs = 1750;
-      const holdMs = 950;
+      const assembleMs = 1700;
+      const holdMs = 900;
 
       function step(now) {
         if (introDone) return;
@@ -2665,10 +3419,8 @@
         ic.setTransform(idpr, 0, 0, idpr, 0, 0);
         ic.clearRect(0, 0, iw, ih);
 
-        // 1. Lush botanical depth-of-field bokeh
-        const bokehAlpha = Math.min(1, elapsed / 700);
         ic.save();
-        ic.globalAlpha = bokehAlpha;
+        ic.globalAlpha = Math.min(1, elapsed / 700);
         for (let i = 0; i < bokeh.length; i++) {
           const b = bokeh[i];
           const g = ic.createRadialGradient(b.x, b.y, 2, b.x, b.y, b.r);
@@ -2681,12 +3433,10 @@
         }
         ic.restore();
 
-        // 2. Core Sapphire Ocean Sphere fades in as particles converge
         const coreAlpha = Math.max(0, Math.min(1, (pGlobal - 0.35) / 0.55));
         if (coreAlpha > 0) {
           ic.save();
           ic.globalAlpha = coreAlpha;
-          // Emerald-cyan rim glow
           const rim = ic.createRadialGradient(cx, cy, R * 0.85, cx, cy, R * 1.28);
           rim.addColorStop(0, 'rgba(16, 185, 129, 0.32)');
           rim.addColorStop(0.5, 'rgba(56, 189, 248, 0.14)');
@@ -2696,7 +3446,6 @@
           ic.arc(cx, cy, R * 1.28, 0, Math.PI * 2);
           ic.fill();
 
-          // Deep glossy ocean sphere
           const sph = ic.createRadialGradient(cx - R * 0.3, cy - R * 0.32, R * 0.08, cx, cy, R);
           sph.addColorStop(0, '#2563eb');
           sph.addColorStop(0.55, '#1e3a8a');
@@ -2708,7 +3457,6 @@
           ic.restore();
         }
 
-        // 3. Swirling assembly particles (moss, ocean, clouds)
         for (let i = 0; i < particles.length; i++) {
           const pt = particles[i];
           const t = Math.max(0, Math.min(1, (pGlobal - pt.delay) / (1 - pt.delay)));
@@ -2727,24 +3475,20 @@
         }
         ic.globalAlpha = 1;
 
-        // 4. Reveal crisp official title once sphere is mostly assembled
-        if (elapsed > 900 && textEl.classList.contains('opacity-0')) {
+        if (elapsed > 850 && textEl.classList.contains('opacity-0')) {
           textEl.classList.remove('opacity-0', 'translate-y-3');
         }
-
-        // 5. Hold briefly as assembled Eco-Earth, then dissolve smoothly to transparent
         if (elapsed >= assembleMs + holdMs) {
           dismissEcoIntro();
           return;
         }
         introRaf = requestAnimationFrame(step);
       }
-
       introRaf = requestAnimationFrame(step);
     }
 
     // =========================================================================
-    // 12. UTILITIES & BOOTSTRAP
+    // 13. UTILITIES & BOOTSTRAP
     // =========================================================================
     function escapeHtml(str) {
       return String(str ?? '')
@@ -2774,6 +3518,7 @@
       resetInspectorToFeed();
       initAuthAndGroups();
       fetchGovOpenData();
+      fetchBatchCityWeatherAndAqi();
       fetchLiveUsgsEarthquakes(false);
       fetchAiWildfireNewsGroup(false);
       animateLoop();

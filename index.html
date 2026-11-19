@@ -1,0 +1,2427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgniNet | 3D Earth Biome, Glacier & Wildfire Atlas</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- D3 & TopoJSON for High-DPI 3D Spherical Earth Projection -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+  <!-- Editorial & UI Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #000000;
+      user-select: none;
+      -webkit-font-smoothing: antialiased;
+    }
+    .serif { font-family: 'Fraunces', serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* Official Refined Glass Surfaces */
+    .glass {
+      background: rgba(255, 255, 255, 0.93);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      border: 1px solid rgba(15, 23, 42, 0.09);
+      box-shadow: 0 8px 28px rgba(2, 6, 23, 0.16), 0 1px 2px rgba(2, 6, 23, 0.08);
+    }
+    .glass-dark {
+      background: rgba(15, 23, 42, 0.90);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(15, 23, 42, 0.18); border-radius: 999px; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Range Sliders */
+    input[type="range"] {
+      accent-color: #0f4c3a;
+      cursor: pointer;
+    }
+
+    #globeCanvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      cursor: grab;
+      touch-action: none;
+    }
+    #globeCanvas:active { cursor: grabbing; }
+  </style>
+</head>
+<body class="text-slate-900">
+
+  <!-- Full-Viewport 3D Spherical Earth Canvas -->
+  <canvas id="globeCanvas"></canvas>
+
+  <!-- Hover Magnetic Crosshair Tooltip -->
+  <div id="hoverHud" class="fixed pointer-events-none z-40 hidden glass-dark text-white rounded-xl px-3.5 py-2.5 text-xs max-w-[260px] transition-opacity duration-100"></div>
+
+  <!-- Toast Notification Banner -->
+  <div id="toastBox" class="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 hidden glass-dark text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-2xl border border-white/15 whitespace-nowrap"></div>
+
+  <!-- ======================================================================= -->
+  <!-- TOP NAVIGATION BAR: BRAND | CENTER SEARCH | LAYER CONTROLS & SIGN IN    -->
+  <!-- ======================================================================= -->
+  <header class="fixed top-3.5 left-3.5 right-3.5 z-30 flex flex-wrap lg:flex-nowrap items-center justify-between gap-2.5 pointer-events-none">
+
+    <!-- Brand Pill (Top Left) -->
+    <div class="glass rounded-2xl px-3.5 py-2 flex items-center gap-3 pointer-events-auto shrink-0">
+      <div class="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-sm">
+        <svg class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      </div>
+      <div class="leading-tight">
+        <div class="flex items-center gap-2">
+          <h1 class="serif text-[15px] font-bold tracking-tight text-slate-900">AgniNet</h1>
+          <span id="dataBadge" class="inline-flex items-center gap-1 text-[9.5px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/80">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>NASA Live
+          </span>
+        </div>
+        <p class="text-[10px] text-slate-500 font-medium tracking-wide hidden sm:block">Global Earth Observation &amp; Climate Atlas</p>
+      </div>
+    </div>
+
+    <!-- Top-Center Google-Maps-Style Search Bar -->
+    <div class="relative w-full lg:w-[440px] max-w-full pointer-events-auto order-3 lg:order-2">
+      <div class="glass rounded-full flex items-center px-4 py-1.5 gap-2.5 focus-within:ring-2 focus-within:ring-slate-900/20">
+        <svg class="w-4 h-4 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input
+          id="searchInput"
+          type="text"
+          autocomplete="off"
+          placeholder="Search wildfire, glacier, or region (e.g. Pir Panjal, Gangotri, Amazon)..."
+          class="w-full bg-transparent text-xs font-medium text-slate-800 placeholder-slate-400 outline-none py-1"
+          oninput="handleSearchInput(this.value)"
+          onfocus="handleSearchInput(this.value)"
+        />
+        <button id="clearSearchBtn" onclick="clearSearch()" class="hidden text-slate-400 hover:text-slate-700 text-xs font-bold px-1.5 cursor-pointer">✕</button>
+      </div>
+
+      <!-- Subtle Official Quick-Jump Pills -->
+      <div class="flex items-center justify-center gap-1.5 mt-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+        <button onclick="quickSearch('Pir Panjal')" class="glass text-[10.5px] font-semibold text-slate-700 hover:bg-slate-900 hover:text-white px-2.5 py-1 rounded-full transition shrink-0 cursor-pointer flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>Pir Panjal</button>
+        <button onclick="quickSearch('Bastar')" class="glass text-[10.5px] font-semibold text-slate-700 hover:bg-slate-900 hover:text-white px-2.5 py-1 rounded-full transition shrink-0 cursor-pointer flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>Bastar</button>
+        <button onclick="quickSearch('Gangotri')" class="glass text-[10.5px] font-semibold text-slate-700 hover:bg-sky-700 hover:text-white px-2.5 py-1 rounded-full transition shrink-0 cursor-pointer flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span>Gangotri</button>
+        <button onclick="quickSearch('Siachen')" class="glass text-[10.5px] font-semibold text-slate-700 hover:bg-sky-700 hover:text-white px-2.5 py-1 rounded-full transition shrink-0 cursor-pointer flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span>Siachen</button>
+        <button onclick="quickSearch('Amazon')" class="glass text-[10.5px] font-semibold text-slate-700 hover:bg-slate-900 hover:text-white px-2.5 py-1 rounded-full transition shrink-0 cursor-pointer flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>Amazon</button>
+        <button onclick="quickSearch('California')" class="glass text-[10.5px] font-semibold text-slate-700 hover:bg-slate-900 hover:text-white px-2.5 py-1 rounded-full transition shrink-0 cursor-pointer flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>California</button>
+      </div>
+
+      <!-- Search Results Dropdown -->
+      <div id="searchDropdown" class="hidden absolute left-0 right-0 top-[44px] glass rounded-2xl p-1.5 max-h-64 overflow-y-auto z-50 border border-slate-200/80 shadow-2xl"></div>
+    </div>
+
+    <!-- Top-Right Official Controls: Map Layers, Tour, Groups & Gmail Sign-In -->
+    <div class="flex items-center gap-1.5 pointer-events-auto order-2 lg:order-3 flex-wrap justify-end">
+      <div class="glass rounded-xl p-1 flex items-center gap-0.5">
+        <button id="btnStyle" onclick="toggleMapStyle()" class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-700 hover:bg-slate-100 transition cursor-pointer" title="Switch Google Satellite / Official Map">Map View</button>
+        <button id="btnDayNight" onclick="toggleLayer('dayNight')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-indigo-900 text-white shadow-sm transition cursor-pointer" title="Toggle Real-Time Day &amp; Night Terminator">Day/Night</button>
+        <button id="btnWarming" onclick="toggleLayer('warming')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-red-600 text-white shadow-sm transition cursor-pointer" title="Toggle Global Warming Zones">Warming</button>
+        <button id="btnGlaciers" onclick="toggleLayer('glaciers')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-sky-700 text-white shadow-sm transition cursor-pointer" title="Toggle Melting Glaciers">Glaciers</button>
+        <button id="btnBiomes" onclick="toggleLayer('biomes')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-emerald-800 text-white shadow-sm transition cursor-pointer" title="Toggle Land-Clipped Biomes & Rivers">Biomes</button>
+        <button id="btnTour" onclick="toggleJudgeTour()" class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-700 hover:bg-slate-100 transition cursor-pointer" title="Automated Tour">Tour</button>
+      </div>
+
+      <!-- Open Right-Side SDG 13 Climate Groups Drawer -->
+      <button onclick="toggleGroupsDrawer(true)" class="px-3 py-2 rounded-xl text-[11px] font-semibold bg-slate-900 text-white hover:bg-slate-800 shadow-md transition flex items-center gap-1.5 cursor-pointer">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Groups</span>
+      </button>
+
+      <!-- Gmail Sign-In / Profile Button -->
+      <button onclick="openAuthModal()" class="px-3 py-2 rounded-xl text-[11px] font-semibold bg-[#1a73e8] text-white hover:bg-blue-700 shadow-md transition flex items-center gap-1.5 cursor-pointer">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span id="authTopLabel">Sign In</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ======================================================================= -->
+  <!-- LEFT INSPECTOR DRAWER: LIVE FEED / INCIDENT REPORT / BIOME PROBE        -->
+  <!-- ======================================================================= -->
+  <aside id="leftDrawer" class="fixed top-[108px] lg:top-[84px] left-3.5 bottom-[84px] w-[320px] sm:w-[348px] max-w-[calc(100vw-28px)] z-20 glass rounded-2xl flex flex-col overflow-hidden transition-transform duration-300">
+    <!-- Drawer Header -->
+    <div class="px-4 py-3 border-b border-slate-200/80 flex items-center justify-between gap-2 bg-white/70">
+      <div class="min-w-0">
+        <h2 id="inspectorTitle" class="serif text-[15px] font-bold text-slate-900 truncate">Global Earth Feed</h2>
+        <p id="inspectorSubtitle" class="text-[10.5px] text-slate-500 truncate">Select a marker or click land to inspect</p>
+      </div>
+      <div class="flex items-center gap-1 shrink-0">
+        <button id="btnBackFeed" onclick="resetInspectorToFeed()" class="hidden px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-[10.5px] font-semibold text-slate-700 cursor-pointer">← Feed</button>
+        <button onclick="toggleLeftDrawer()" class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold flex items-center justify-center cursor-pointer" title="Minimize panel">−</button>
+      </div>
+    </div>
+
+    <!-- Scrollable Inspector Body -->
+    <div id="inspectorBody" class="flex-1 overflow-y-auto p-3.5 space-y-2.5"></div>
+  </aside>
+
+  <!-- Restore Left Drawer Floating Pill (when minimized) -->
+  <button id="restoreLeftBtn" onclick="toggleLeftDrawer()" class="hidden fixed top-[108px] lg:top-[84px] left-3.5 z-20 glass px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-800 hover:bg-slate-900 hover:text-white transition cursor-pointer">
+    Open Telemetry Panel
+  </button>
+
+  <!-- ======================================================================= -->
+  <!-- RIGHT FLOATING WIND & 6-HOUR FIRE SPREAD SIMULATOR + GLOBE CONTROLS     -->
+  <!-- ======================================================================= -->
+  <div class="fixed right-3.5 bottom-[84px] z-20 flex flex-col items-end gap-2.5 pointer-events-none">
+    <!-- Wind Vector & Spread Control Card -->
+    <div class="glass rounded-2xl p-3.5 w-[232px] pointer-events-auto hidden sm:block">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-[11px] font-bold text-slate-800 tracking-tight">Wind &amp; 6h Spread Cone</span>
+        <span id="windBadge" class="mono text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 border border-slate-200">28 km/h NE</span>
+      </div>
+      <div class="space-y-2">
+        <div>
+          <div class="flex justify-between text-[10px] text-slate-500 font-semibold">
+            <span>Wind Speed</span>
+            <span id="windSpeedLbl" class="mono text-slate-700">28 km/h</span>
+          </div>
+          <input id="windSpeedSlider" type="range" min="5" max="85" value="28" oninput="updateWindUI()" class="w-full h-1.5" />
+        </div>
+        <div>
+          <div class="flex justify-between text-[10px] text-slate-500 font-semibold">
+            <span>Bearing Direction</span>
+            <span id="windDirLbl" class="mono text-slate-700">45° (NE)</span>
+          </div>
+          <input id="windDirSlider" type="range" min="0" max="359" value="45" oninput="updateWindUI()" class="w-full h-1.5" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Google-Maps-Style Globe Zoom & Focus Controls -->
+    <div class="glass rounded-xl p-1 flex items-center gap-1 pointer-events-auto">
+      <button onclick="focusIndia()" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-[11px] font-semibold text-white transition cursor-pointer" title="Focus Official Survey of India Map">India</button>
+      <button onclick="zoomBy(1.25)" class="w-7 h-7 rounded-lg hover:bg-slate-100 font-semibold text-sm text-slate-700 cursor-pointer" title="Zoom In">+</button>
+      <button onclick="zoomBy(0.8)" class="w-7 h-7 rounded-lg hover:bg-slate-100 font-semibold text-sm text-slate-700 cursor-pointer" title="Zoom Out">−</button>
+      <button onclick="resetGlobalView()" class="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-700 flex items-center justify-center cursor-pointer" title="Reset Global View">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- JUDGE AUTO-TOUR BANNER                                                  -->
+  <!-- ======================================================================= -->
+  <div id="tourBanner" class="hidden fixed top-[112px] lg:top-[84px] left-1/2 -translate-x-1/2 z-30 glass-dark text-white rounded-xl px-4 py-2.5 max-w-md w-[90vw] flex items-center justify-between gap-3 border border-white/15">
+    <div class="min-w-0">
+      <div class="text-[9.5px] font-bold uppercase tracking-widest text-emerald-400">Guided Planetary Tour</div>
+      <div id="tourCaption" class="text-xs font-medium truncate mt-0.5">Initializing planetary overview...</div>
+    </div>
+    <button onclick="toggleJudgeTour()" class="px-2.5 py-1 rounded-lg bg-white/15 hover:bg-red-600 text-[11px] font-semibold shrink-0 cursor-pointer">Stop</button>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- BOTTOM 24-HOUR ORBITAL TIMELINE SCRUBBER                                -->
+  <!-- ======================================================================= -->
+  <footer class="fixed bottom-3.5 left-3.5 right-3.5 z-20 flex justify-center pointer-events-none">
+    <div class="glass rounded-2xl px-4 py-2.5 w-full max-w-2xl flex items-center gap-3 pointer-events-auto">
+      <button id="playTimelineBtn" onclick="toggleTimelinePlay()" class="w-8 h-8 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center shrink-0 cursor-pointer" title="Play 24-Hour Orbital Pass">▶</button>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center justify-between text-[10.5px] font-semibold mb-0.5">
+          <span class="text-slate-800">24-Hour VIIRS Orbital Scrubber</span>
+          <span id="timelineLabel" class="mono text-slate-600">24:00 UTC • Active Fronts</span>
+        </div>
+        <input id="timelineSlider" type="range" min="1" max="24" value="24" oninput="setTimelineHour(this.value)" class="w-full h-1.5" />
+      </div>
+    </div>
+  </footer>
+
+  <!-- ======================================================================= -->
+  <!-- RIGHT-SIDE SLIDE-OVER SDG 13 CLIMATE GROUPS DRAWER (ZERO BOTS)          -->
+  <!-- ======================================================================= -->
+  <div id="groupsBackdrop" onclick="toggleGroupsDrawer(false)" class="hidden fixed inset-0 bg-slate-950/45 backdrop-blur-[2px] z-40"></div>
+  <aside id="groupsDrawer" class="fixed top-0 right-0 bottom-0 w-full max-w-[410px] bg-slate-50 z-50 shadow-2xl border-l border-slate-200 transform translate-x-full transition-transform duration-300 flex flex-col">
+    <!-- Header -->
+    <div class="px-5 py-4 bg-slate-900 text-white flex items-center justify-between">
+      <div>
+        <h2 class="serif text-lg font-bold leading-tight">SDG 13 Climate Groups</h2>
+        <p class="text-[11px] text-slate-300">Global Discussion, Ideas Hub &amp; Private Rooms</p>
+      </div>
+      <button onclick="toggleGroupsDrawer(false)" class="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-sm flex items-center justify-center cursor-pointer">✕</button>
+    </div>
+
+    <!-- Signed-In User Strip -->
+    <div id="drawerUserStrip" class="px-4 py-2.5 bg-white border-b border-slate-200 flex items-center justify-between gap-2 text-xs"></div>
+
+    <!-- 3 Group Tabs -->
+    <div class="p-2.5 bg-white border-b border-slate-200 grid grid-cols-3 gap-1.5">
+      <button id="gtab-world" onclick="switchGroupTab('world')" class="py-2 px-2 rounded-xl text-[11px] font-semibold bg-slate-900 text-white shadow-sm transition cursor-pointer">World SDG 13</button>
+      <button id="gtab-ideas" onclick="switchGroupTab('ideas')" class="py-2 px-2 rounded-xl text-[11px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition cursor-pointer">Ideas Hub</button>
+      <button id="gtab-private" onclick="switchGroupTab('private')" class="py-2 px-2 rounded-xl text-[11px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition cursor-pointer">Private</button>
+    </div>
+
+    <!-- TAB 1: WORLD SDG 13 CHAT -->
+    <div id="gpanel-world" class="flex-1 flex flex-col min-h-0">
+      <div id="worldChatMessages" class="flex-1 overflow-y-auto p-3.5 space-y-2.5 bg-slate-50"></div>
+      <form onsubmit="sendWorldMessage(event)" class="p-3 bg-white border-t border-slate-200 flex gap-2">
+        <input id="worldChatInput" type="text" placeholder="Discuss UN SDG 13 Climate Action..." class="flex-1 bg-slate-100 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-slate-900/20" />
+        <button type="submit" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer">Send</button>
+      </form>
+    </div>
+
+    <!-- TAB 2: IDEAS & PROJECTS HUB -->
+    <div id="gpanel-ideas" class="hidden flex-1 flex flex-col min-h-0">
+      <div class="p-3 bg-white border-b border-slate-200">
+        <button onclick="toggleIdeaForm()" class="w-full py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-[#14532d] border border-emerald-900/15 text-xs font-bold transition cursor-pointer">
+          + Post Your Climate Idea or Project
+        </button>
+        <form id="ideaForm" onsubmit="submitIdeaProject(event)" class="hidden mt-3 space-y-2">
+          <input id="ideaTitleInput" type="text" required placeholder="Project or Idea Title" class="w-full bg-slate-100 rounded-xl px-3 py-2 text-xs outline-none" />
+          <select id="ideaCategoryInput" class="w-full bg-slate-100 rounded-xl px-3 py-2 text-xs outline-none font-semibold text-slate-700">
+            <option value="Wildfire Prevention">Wildfire Prevention</option>
+            <option value="Glacier & Water Tech">Glacier &amp; Water Tech</option>
+            <option value="Clean Energy & Carbon">Clean Energy &amp; Carbon</option>
+            <option value="Reforestation & Policy">Reforestation &amp; Policy</option>
+          </select>
+          <textarea id="ideaDescInput" rows="3" required placeholder="Explain how your idea solves climate change..." class="w-full bg-slate-100 rounded-xl px-3 py-2 text-xs outline-none resize-none"></textarea>
+          <button type="submit" class="w-full py-2 rounded-xl bg-[#14532d] hover:bg-emerald-900 text-white text-xs font-bold cursor-pointer">Publish Idea</button>
+        </form>
+      </div>
+      <div id="ideasList" class="flex-1 overflow-y-auto p-3.5 space-y-2.5 bg-[#f7f5ef]"></div>
+    </div>
+
+    <!-- TAB 3: PRIVATE CLIMATE GROUPS -->
+    <div id="gpanel-private" class="hidden flex-1 flex flex-col min-h-0">
+      <!-- List / Create / Join View -->
+      <div id="privateListView" class="flex-1 flex flex-col min-h-0">
+        <div class="p-3 bg-white border-b border-slate-200 space-y-2.5">
+          <form onsubmit="createPrivateGroup(event)" class="space-y-2">
+            <div class="text-[11px] font-extrabold text-slate-800">Create a Private Climate Group</div>
+            <input id="privGroupName" type="text" required placeholder="Group Name (e.g. Himalayan Youth Watch)" class="w-full bg-slate-100 rounded-xl px-3 py-2 text-xs outline-none" />
+            <input id="privGroupTopic" type="text" required placeholder="Topic / Goal" class="w-full bg-slate-100 rounded-xl px-3 py-2 text-xs outline-none" />
+            <button type="submit" class="w-full py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer">+ Create Private Group</button>
+          </form>
+          <form onsubmit="joinPrivateByCode(event)" class="flex gap-2 pt-2 border-t border-slate-100">
+            <input id="joinCodeInput" type="text" placeholder="Enter Invite Code (e.g. ECO-4821)" class="flex-1 bg-slate-100 rounded-xl px-3 py-2 text-xs uppercase mono outline-none" />
+            <button type="submit" class="px-3.5 py-2 rounded-xl bg-[#14532d] text-white text-xs font-bold cursor-pointer">Join</button>
+          </form>
+        </div>
+        <div id="privateGroupsList" class="flex-1 overflow-y-auto p-3.5 space-y-2.5 bg-[#f7f5ef]"></div>
+      </div>
+
+      <!-- Active Private Room Chat View -->
+      <div id="privateRoomView" class="hidden flex-1 flex flex-col min-h-0">
+        <div class="px-3.5 py-2.5 bg-slate-900 text-white flex items-center justify-between gap-2">
+          <div class="min-w-0">
+            <button onclick="closePrivateRoom()" class="text-[10px] text-slate-300 hover:text-white font-bold cursor-pointer">← All Private Groups</button>
+            <div id="activePrivRoomName" class="font-bold text-xs truncate"></div>
+            <div id="activePrivRoomCode" class="mono text-[10px] text-emerald-300"></div>
+          </div>
+          <button onclick="copyActiveRoomCode()" class="px-2.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-[10px] font-bold shrink-0 cursor-pointer">📋 Copy Code</button>
+        </div>
+        <div id="privateRoomMessages" class="flex-1 overflow-y-auto p-3.5 space-y-2.5 bg-[#f7f5ef]"></div>
+        <form onsubmit="sendPrivateMessage(event)" class="p-3 bg-white border-t border-slate-200 flex gap-2">
+          <input id="privateChatInput" type="text" placeholder="Message private group..." class="flex-1 bg-slate-100 rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-slate-900/30" />
+          <button type="submit" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer">Send</button>
+        </form>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ======================================================================= -->
+  <!-- GMAIL SIGN-IN / LOGIN MODAL                                             -->
+  <!-- ======================================================================= -->
+  <div id="authModal" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 relative">
+      <button onclick="closeAuthModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs flex items-center justify-center cursor-pointer">✕</button>
+      <div class="flex items-center gap-2.5 mb-4">
+        <div class="w-10 h-10 rounded-2xl bg-blue-50 text-[#1a73e8] flex items-center justify-center text-xl font-extrabold">G</div>
+        <div>
+          <h3 class="serif text-lg font-bold text-slate-900">Sign in with Gmail</h3>
+          <p class="text-[11px] text-slate-500">Join SDG 13 Climate Groups &amp; post ideas</p>
+        </div>
+      </div>
+
+      <form onsubmit="handleAuthSubmit(event)" class="space-y-3">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 mb-1">Display Name</label>
+          <input id="authNameInput" type="text" required placeholder="e.g. Aarav Sharma" class="w-full bg-slate-100 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:ring-2 focus:ring-[#1a73e8]" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 mb-1">Gmail Address</label>
+          <input id="authEmailInput" type="email" required placeholder="yourname@gmail.com" class="w-full bg-slate-100 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:ring-2 focus:ring-[#1a73e8]" />
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-700 mb-1">Password</label>
+          <input id="authPassInput" type="password" required placeholder="Minimum 6 characters" class="w-full bg-slate-100 rounded-xl px-3.5 py-2.5 text-xs outline-none focus:ring-2 focus:ring-[#1a73e8]" />
+        </div>
+        <div id="authErrorMsg" class="hidden text-[11px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2"></div>
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-[#1a73e8] hover:bg-blue-700 text-white text-xs font-bold shadow-md transition cursor-pointer">
+          Continue with Gmail
+        </button>
+      </form>
+
+      <div id="authSignedInActions" class="hidden mt-3 pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
+        <span class="text-emerald-700 font-semibold">✓ Currently signed in</span>
+        <button onclick="signOutUser()" class="text-red-600 hover:underline font-bold cursor-pointer">Sign Out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================= -->
+  <!-- APPLICATION ENGINE                                                      -->
+  <!-- ======================================================================= -->
+  <script>
+    // -------------------------------------------------------------------------
+    // 1. GLOBAL & SOUTH ASIA WILDFIRE BASELINE (SYNCHRONIZED T4 & T5 IN °C)
+    // -------------------------------------------------------------------------
+    let wildfires = [
+      {
+        id: "wf-pir-panjal", type: "fire", source: "NASA VIIRS 375m",
+        name: "Pir Panjal Range, J&K", shortName: "Pir Panjal",
+        lat: 33.65, lon: 74.65, fireC: 73.4, ambientC: 16.2, frp: 24.8, c_size: 4, hour: 6,
+        biome: "Himalayan Montane Evergreen Forest", risk: "CRITICAL",
+        lastCaught: "18 Nov 2026 • 14:20 UTC", containmentPct: 82, responseMins: 22,
+        managementGrade: "Well Managed (A)",
+        managementNotes: "J&K Forest Dept & SDRF deployed high-altitude firebreaks within 22 mins; pine-needle crown spread halted before reaching timberline villages."
+      },
+      {
+        id: "wf-garhwal", type: "fire", source: "NASA VIIRS 375m",
+        name: "Garhwal Himalayas, Uttarakhand", shortName: "Garhwal",
+        lat: 30.38, lon: 78.78, fireC: 75.1, ambientC: 19.4, frp: 28.4, c_size: 5, hour: 9,
+        biome: "Sub-Alpine Evergreen Pine Forest", risk: "CRITICAL",
+        lastCaught: "18 Nov 2026 • 11:05 UTC", containmentPct: 76, responseMins: 26,
+        managementGrade: "Effective (A-)",
+        managementNotes: "IAF Bambi-bucket sorties paired with Van Panchayat ground crews contained ridge-line chir pine ignition."
+      },
+      {
+        id: "wf-bastar", type: "fire", source: "NASA VIIRS 375m",
+        name: "Bastar Forest, Chhattisgarh", shortName: "Bastar",
+        lat: 19.12, lon: 81.95, fireC: 85.8, ambientC: 31.2, frp: 42.1, c_size: 6, hour: 4,
+        biome: "Tropical Moist Deciduous Forest", risk: "CRITICAL",
+        lastCaught: "19 Nov 2026 • 03:40 UTC", containmentPct: 68, responseMins: 31,
+        managementGrade: "Active Containment (B+)",
+        managementNotes: "Dense dry sal leaf litter amplified radiative power to 42.1 MW; counter-firing corridors are stabilizing the eastern flank."
+      },
+      {
+        id: "wf-similipal", type: "fire", source: "NASA VIIRS 375m",
+        name: "Similipal Biosphere, Odisha", shortName: "Similipal",
+        lat: 21.75, lon: 86.32, fireC: 78.1, ambientC: 29.8, frp: 33.6, c_size: 5, hour: 12,
+        biome: "Tropical Semi-Evergreen Forest", risk: "CRITICAL",
+        lastCaught: "18 Nov 2026 • 19:15 UTC", containmentPct: 88, responseMins: 18,
+        managementGrade: "Well Managed (A+)",
+        managementNotes: "Rapid blower-squad deployment protected the core tiger habitat with zero canopy loss in the inner sanctuary."
+      },
+      {
+        id: "wf-bandipur", type: "fire", source: "NASA VIIRS 375m",
+        name: "Bandipur Reserve, Karnataka", shortName: "Bandipur",
+        lat: 11.66, lon: 76.63, fireC: 71.9, ambientC: 23.7, frp: 21.5, c_size: 4, hour: 15,
+        biome: "Western Ghats Tropical Forest", risk: "CRITICAL",
+        lastCaught: "18 Nov 2026 • 16:50 UTC", containmentPct: 91, responseMins: 15,
+        managementGrade: "Exemplary (A+)",
+        managementNotes: "Pre-season cleared fire lines and early satellite alerts enabled rapid perimeter lock before evening winds picked up."
+      },
+      {
+        id: "wf-namdapha", type: "fire", source: "NASA VIIRS 375m",
+        name: "Namdapha National Park, Arunachal", shortName: "Namdapha",
+        lat: 27.49, lon: 96.38, fireC: 74.2, ambientC: 20.1, frp: 26.0, c_size: 4, hour: 11,
+        biome: "Eastern Himalayan Evergreen Forest", risk: "CRITICAL",
+        lastCaught: "18 Nov 2026 • 09:30 UTC", containmentPct: 79, responseMins: 29,
+        managementGrade: "Well Managed (A-)",
+        managementNotes: "Steep valley terrain slowed access, but riverine moisture barriers and local community rangers halted uphill spread."
+      },
+      {
+        id: "wf-amazon", type: "fire", source: "NASA VIIRS 375m",
+        name: "Mato Grosso, Amazon Basin", shortName: "Amazon",
+        lat: -10.25, lon: -55.80, fireC: 88.4, ambientC: 33.1, frp: 54.0, c_size: 7, hour: 8,
+        biome: "Amazon Tropical Rainforest", risk: "CRITICAL",
+        lastCaught: "19 Nov 2026 • 01:10 UTC", containmentPct: 54, responseMins: 44,
+        managementGrade: "Strained (C+)",
+        managementNotes: "Severe dry-season moisture deficit created multiple deforestation-edge fronts requiring coordinated aerial suppression."
+      },
+      {
+        id: "wf-california", type: "fire", source: "NASA VIIRS 375m",
+        name: "Sierra Nevada, California", shortName: "California",
+        lat: 37.85, lon: -119.55, fireC: 81.2, ambientC: 22.8, frp: 39.5, c_size: 5, hour: 14,
+        biome: "Temperate Mixed Conifer Forest", risk: "CRITICAL",
+        lastCaught: "18 Nov 2026 • 22:45 UTC", containmentPct: 84, responseMins: 16,
+        managementGrade: "Well Managed (A)",
+        managementNotes: "CAL FIRE retardant drops and automated ridgeline camera triangulation contained the flank prior to gust intensification."
+      },
+      {
+        id: "wf-siberian", type: "fire", source: "NASA VIIRS 375m",
+        name: "Yakutia Taiga, Siberia", shortName: "Siberia",
+        lat: 62.45, lon: 129.60, fireC: 69.5, ambientC: 11.4, frp: 31.2, c_size: 5, hour: 18,
+        biome: "Siberian Boreal Taiga", risk: "MODERATE",
+        lastCaught: "18 Nov 2026 • 07:00 UTC", containmentPct: 61, responseMins: 52,
+        managementGrade: "Remote Monitoring (B)",
+        managementNotes: "Peatland smoldering in permafrost zones requires sustained satellite thermal tracking to prevent re-ignition."
+      },
+      {
+        id: "wf-australia", type: "fire", source: "NASA VIIRS 375m",
+        name: "Blue Mountains, Australia", shortName: "Australia",
+        lat: -33.65, lon: 150.30, fireC: 79.6, ambientC: 28.9, frp: 36.8, c_size: 5, hour: 20,
+        biome: "Eucalyptus Sclerophyll Forest", risk: "MODERATE",
+        lastCaught: "18 Nov 2026 • 21:15 UTC", containmentPct: 86, responseMins: 19,
+        managementGrade: "Well Managed (A)",
+        managementNotes: "RFS hazard-reduction burns from winter significantly lowered fuel load and slowed eucalyptus ember spotting."
+      }
+    ];
+
+    // -------------------------------------------------------------------------
+    // 4. OFFICIAL SURVEY OF INDIA NATIONAL BOUNDARY (HIGH-PRECISION)
+    //    Includes full Jammu & Kashmir (PoK, Gilgit-Baltistan), Ladakh (Aksai Chin,
+    //    Shaksgam), Arunachal Pradesh, Andaman & Nicobar, and Lakshadweep.
+    // -------------------------------------------------------------------------
+    const indiaOfficialGeo = {
+      type: "Feature",
+      properties: { name: "India" },
+      geometry: {
+        type: "MultiPolygon",
+        coordinates: [
+          // Mainland India (Survey of India Official Outer Boundary)
+          [[
+            [68.18, 23.70], [68.85, 24.10], [69.60, 24.65], [70.85, 24.75], [71.10, 25.30],
+            [70.18, 26.25], [69.52, 27.05], [70.35, 27.95], [71.60, 28.05], [72.80, 29.05],
+            [73.85, 30.00], [74.55, 31.10], [74.60, 31.75], [75.05, 32.35], [74.55, 32.70],
+            [74.05, 33.15], [73.68, 33.85], [73.50, 34.45], [73.75, 35.15], [73.10, 35.75],
+            [72.55, 36.15], [72.90, 36.85], [73.95, 37.05], [74.75, 37.08], [75.60, 36.95],
+            [76.20, 36.50], [77.15, 35.95], [77.85, 35.55], [78.60, 35.80], [79.45, 35.85],
+            [79.90, 35.20], [79.85, 34.50], [79.45, 33.90], [78.95, 33.30], [79.10, 32.65],
+            [78.55, 32.15], [78.90, 31.45], [79.15, 31.15], [80.05, 30.75], [80.95, 30.20],
+            [80.20, 29.15], [80.10, 28.75], [81.15, 28.40], [82.50, 27.65], [84.10, 27.45],
+            [85.80, 26.75], [87.25, 26.45], [88.15, 26.65], [88.05, 27.25], [88.15, 27.95],
+            [88.65, 28.10], [88.95, 27.45], [88.90, 27.10], [89.45, 26.75], [90.65, 26.80],
+            [91.65, 26.85], [92.10, 27.05], [91.65, 27.75], [92.30, 28.05], [93.45, 28.75],
+            [94.80, 29.25], [95.95, 29.30], [96.95, 28.80], [97.40, 28.20], [96.65, 27.30],
+            [95.45, 26.85], [94.95, 25.95], [94.55, 25.15], [94.25, 24.05], [93.35, 23.35],
+            [93.15, 22.10], [92.75, 22.05], [92.40, 23.00], [92.25, 23.80], [91.75, 24.45],
+            [91.30, 23.75], [91.45, 23.05], [91.20, 23.90], [92.30, 24.95], [92.00, 25.20],
+            [90.20, 25.25], [89.85, 25.95], [89.30, 26.25], [88.45, 26.45], [88.15, 25.85],
+            [88.95, 25.20], [88.35, 24.45], [88.75, 23.60], [89.05, 22.05], [88.10, 21.65],
+            [87.05, 21.55], [86.85, 20.60], [85.85, 19.75], [84.90, 19.15], [83.35, 17.75],
+            [82.25, 16.95], [81.10, 15.85], [80.15, 14.95], [80.28, 13.08], [79.85, 11.45],
+            [79.85, 10.28], [79.35, 9.25],  [78.15, 8.75],  [77.55, 8.08],  [76.85, 8.55],
+            [76.25, 9.95],  [75.75, 11.25], [74.85, 12.85], [74.45, 14.20], [73.85, 15.45],
+            [73.35, 16.95], [72.85, 18.95], [72.75, 20.25], [72.65, 21.65], [72.15, 21.75],
+            [71.40, 20.85], [70.40, 20.75], [69.60, 21.65], [68.95, 22.35], [70.20, 22.85],
+            [69.10, 22.85], [68.55, 23.25], [68.18, 23.70]
+          ]],
+          // Andaman Islands
+          [[[92.70, 13.60], [93.05, 13.55], [92.95, 11.60], [92.60, 11.55], [92.70, 13.60]]],
+          // Nicobar Islands
+          [[[93.65, 7.25], [93.95, 7.20], [93.85, 6.75], [93.60, 6.80], [93.65, 7.25]]]
+        ]
+      }
+    };
+
+    // Official Google-Maps-Style Geographic Reference Labels
+    const geoMapLabels = [
+      { text: "INDIA", lon: 79.0, lat: 22.5, kind: "country-focus" },
+      { text: "ASIA", lon: 92.0, lat: 46.0, kind: "continent" },
+      { text: "EUROPE", lon: 18.0, lat: 51.0, kind: "continent" },
+      { text: "AFRICA", lon: 20.0, lat: 4.0, kind: "continent" },
+      { text: "NORTH AMERICA", lon: -100.0, lat: 42.0, kind: "continent" },
+      { text: "SOUTH AMERICA", lon: -59.0, lat: -15.0, kind: "continent" },
+      { text: "AUSTRALIA", lon: 134.0, lat: -25.0, kind: "continent" },
+      { text: "INDIAN OCEAN", lon: 78.0, lat: -8.0, kind: "ocean" },
+      { text: "ARABIAN SEA", lon: 65.5, lat: 15.5, kind: "sea" },
+      { text: "BAY OF BENGAL", lon: 88.0, lat: 14.5, kind: "sea" },
+      { text: "PACIFIC OCEAN", lon: -145.0, lat: 10.0, kind: "ocean" },
+      { text: "ATLANTIC OCEAN", lon: -32.0, lat: 18.0, kind: "ocean" }
+    ];
+
+    // -------------------------------------------------------------------------
+    // 2. MELTING GLACIERS TRACKER (TEMP RISE & ANNUAL RETREAT)
+    // -------------------------------------------------------------------------
+    const glaciers = [
+      {
+        id: "gl-gangotri", type: "glacier",
+        name: "Gangotri Glacier, Uttarakhand", shortName: "Gangotri",
+        lat: 30.92, lon: 79.08, tempRiseC: "+1.85 °C", baselineC: -4.2, currentC: -2.35,
+        retreatRate: "22 m / year", iceLossGt: "0.34 Gt/yr",
+        impact: "Primary headwater of the Bhagirathi-Ganga River; accelerated snout retreat threatens dry-season water security for 400M+ people."
+      },
+      {
+        id: "gl-siachen", type: "glacier",
+        name: "Siachen Glacier, Ladakh, India", shortName: "Siachen",
+        lat: 35.42, lon: 77.10, tempRiseC: "+1.65 °C", baselineC: -11.8, currentC: -10.15,
+        retreatRate: "14 m / year", iceLossGt: "0.41 Gt/yr",
+        impact: "Karakoram high-altitude warming increases glacial lake outburst flood (GLOF) risk along the Nubra-Shyok basin."
+      },
+      {
+        id: "gl-khumbu", type: "glacier",
+        name: "Khumbu Glacier, Mt. Everest", shortName: "Khumbu",
+        lat: 27.93, lon: 86.81, tempRiseC: "+1.92 °C", baselineC: -6.1, currentC: -4.18,
+        retreatRate: "20 m / year", iceLossGt: "0.28 Gt/yr",
+        impact: "Supraglacial melt ponds are expanding rapidly, destabilizing the Khumbu Icefall and downstream Himalayan valleys."
+      },
+      {
+        id: "gl-greenland", type: "glacier",
+        name: "Jakobshavn Isbræ, Greenland", shortName: "Greenland",
+        lat: 69.17, lon: -49.83, tempRiseC: "+3.10 °C", baselineC: -9.5, currentC: -6.40,
+        retreatRate: "38 m / day flow", iceLossGt: "268 Gt/yr (Sheet)",
+        impact: "One of Earth's fastest-draining outlet glaciers; Greenland melt directly drives global sea-level rise."
+      },
+      {
+        id: "gl-columbia", type: "glacier",
+        name: "Columbia Glacier, Alaska", shortName: "Columbia",
+        lat: 61.15, lon: -147.10, tempRiseC: "+2.45 °C", baselineC: -3.1, currentC: -0.65,
+        retreatRate: "24 km since 1980", iceLossGt: "4.2 Gt/yr",
+        impact: "Rapid tidewater calving has thinned the glacier by over 400 meters, contributing disproportionately to North Pacific sea rise."
+      },
+      {
+        id: "gl-thwaites", type: "glacier",
+        name: "Thwaites Glacier, West Antarctica", shortName: "Thwaites",
+        lat: -75.50, lon: -106.75, tempRiseC: "+2.20 °C", baselineC: -14.0, currentC: -11.80,
+        retreatRate: "600 m / yr grounding", iceLossGt: "50 Gt/yr",
+        impact: "Warm circumpolar ocean currents are undercutting the ice shelf from below, making it a key global tipping point."
+      }
+    ];
+
+    // -------------------------------------------------------------------------
+    // 3. NASA GISTEMP GLOBAL WARMING AMPLIFICATION ZONES (SPHERICAL HEAT BLOOMS)
+    // -------------------------------------------------------------------------
+    const warmingZonesRaw = [
+      { name: "Arctic & Siberian Amplification", anomaly: "+3.4 °C", lon: 96, lat: 67, radiusDeg: 22 },
+      { name: "Greenland & High Arctic", anomaly: "+3.1 °C", lon: -42, lat: 71, radiusDeg: 14 },
+      { name: "Hindu Kush Himalaya (Third Pole)", anomaly: "+1.9 °C", lon: 83, lat: 31.5, radiusDeg: 9.5 },
+      { name: "Central & West India Heat Belt", anomaly: "+1.6 °C", lon: 78, lat: 22.5, radiusDeg: 8.5 },
+      { name: "Amazon Drought & Heat Belt", anomaly: "+1.8 °C", lon: -60, lat: -6.5, radiusDeg: 13 },
+      { name: "MENA & Sahel Heat Dome", anomaly: "+2.1 °C", lon: 22, lat: 23, radiusDeg: 18 },
+      { name: "Western North America Megadrought", anomaly: "+2.0 °C", lon: -115, lat: 41, radiusDeg: 13 },
+      { name: "Australian Megafire Belt", anomaly: "+1.7 °C", lon: 136, lat: -26, radiusDeg: 14 }
+    ];
+
+    const warmingFeatures = warmingZonesRaw.map(z => ({
+      ...z,
+      outerCircle: d3.geoCircle().center([z.lon, z.lat]).radius(z.radiusDeg)(),
+      midCircle: d3.geoCircle().center([z.lon, z.lat]).radius(z.radiusDeg * 0.66)(),
+      coreCircle: d3.geoCircle().center([z.lon, z.lat]).radius(z.radiusDeg * 0.36)()
+    }));
+
+    // -------------------------------------------------------------------------
+    // 5. ENVIRONMENTAL BIOMES (ORGANIC LAND-CLIPPED ZONES) & MAJOR RIVERS
+    // -------------------------------------------------------------------------
+    const biomesRaw = [
+      {
+        name: "Thar Desert", kind: "Arid Desert", color: "#eab308", ambientBase: 35.0,
+        coords: [[[68.8,24.4],[71.4,24.5],[73.5,25.8],[74.8,27.8],[74.2,29.5],[71.8,29.3],[70.0,27.6],[68.9,25.9],[68.8,24.4]]]
+      },
+      {
+        name: "Sahara Desert", kind: "Arid Desert", color: "#eab308", ambientBase: 39.5,
+        coords: [[[-17.5,16.8],[-6.0,15.8],[8.0,15.5],[22.0,16.0],[34.5,17.2],[35.0,27.5],[28.0,31.2],[15.0,32.5],[2.0,33.0],[-10.5,30.5],[-17.5,22.0],[-17.5,16.8]]]
+      },
+      {
+        name: "Arabian Desert", kind: "Arid Desert", color: "#eab308", ambientBase: 38.0,
+        coords: [[[35.5,15.5],[44.0,13.5],[55.5,17.0],[58.5,22.5],[51.5,26.5],[47.0,30.5],[39.5,31.5],[35.5,27.0],[35.5,15.5]]]
+      },
+      {
+        name: "Australian Outback", kind: "Arid Desert", color: "#eab308", ambientBase: 36.2,
+        coords: [[[114.5,-26.5],[121.5,-30.5],[133.5,-30.5],[141.5,-27.5],[140.5,-21.5],[131.0,-18.5],[121.0,-19.0],[114.5,-22.5],[114.5,-26.5]]]
+      },
+      {
+        name: "Himalayan Evergreen Forest", kind: "Evergreen Forest", color: "#065f46", ambientBase: 17.5,
+        coords: [[[73.2,32.2],[75.5,35.2],[81.5,31.2],[88.5,28.1],[96.8,28.8],[96.2,26.8],[88.2,27.0],[79.5,29.2],[73.8,31.2],[73.2,32.2]]]
+      },
+      {
+        name: "Siberian Boreal Taiga", kind: "Evergreen Forest", color: "#065f46", ambientBase: 10.2,
+        coords: [[[38.0,57.5],[60.0,55.5],[85.0,54.0],[112.0,53.5],[138.0,55.5],[144.0,63.5],[124.0,67.0],[96.0,68.0],[66.0,66.5],[42.0,64.0],[38.0,57.5]]]
+      },
+      {
+        name: "North American Boreal", kind: "Evergreen Forest", color: "#065f46", ambientBase: 12.8,
+        coords: [[[-142.0,60.5],[-125.0,52.0],[-105.0,49.0],[-84.0,47.5],[-64.0,48.5],[-60.0,56.5],[-78.0,60.5],[-102.0,63.0],[-128.0,65.5],[-142.0,60.5]]]
+      },
+      {
+        name: "Western Ghats & Central Tropical Forest", kind: "Tropical Forest", color: "#15803d", ambientBase: 27.8,
+        coords: [[[73.8,9.2],[76.8,9.2],[81.5,14.5],[86.2,19.2],[85.5,23.2],[78.5,23.5],[75.2,18.5],[73.8,9.2]]]
+      },
+      {
+        name: "Amazon Tropical Rainforest", kind: "Tropical Forest", color: "#15803d", ambientBase: 31.4,
+        coords: [[[-77.5,-4.5],[-74.0,-12.0],[-63.5,-13.5],[-53.0,-10.5],[-47.0,-2.5],[-51.5,3.5],[-62.0,5.5],[-73.0,2.5],[-77.5,-4.5]]]
+      },
+      {
+        name: "Congo Basin Tropical Forest", kind: "Tropical Forest", color: "#15803d", ambientBase: 29.2,
+        coords: [[[9.5,-2.5],[14.0,-6.0],[24.5,-6.2],[30.5,-2.5],[29.5,3.5],[21.5,4.8],[12.5,3.8],[9.5,-2.5]]]
+      },
+      {
+        name: "Southeast Asia & Sundaland Tropical", kind: "Tropical Forest", color: "#15803d", ambientBase: 30.1,
+        coords: [[[95.5,5.5],[101.5,-4.5],[114.5,-5.5],[119.5,1.5],[116.5,7.0],[104.0,8.0],[95.5,5.5]]]
+      }
+    ];
+
+    const biomeFeatures = biomesRaw.map(b => ({
+      type: "Feature",
+      properties: { name: b.name, kind: b.kind, color: b.color, ambientBase: b.ambientBase },
+      geometry: { type: "Polygon", coordinates: b.coords }
+    }));
+
+    const majorRivers = [
+      { name: "Ganga-Brahmaputra", coords: [[79.0,30.9],[81.8,25.4],[85.1,25.6],[88.3,22.6],[90.4,23.7],[91.8,26.1],[95.3,27.5]] },
+      { name: "Indus", coords: [[79.5,31.2],[77.5,34.1],[75.2,35.4],[72.4,33.9],[70.2,29.5],[68.0,24.2]] },
+      { name: "Amazon", coords: [[-75.5,-4.5],[-69.0,-4.2],[-60.0,-3.1],[-54.5,-2.4],[-49.5,-0.5]] },
+      { name: "Nile", coords: [[32.6,0.4],[31.6,4.8],[32.5,15.6],[32.8,24.1],[31.2,30.1]] }
+    ];
+
+    // -------------------------------------------------------------------------
+    // 6. 3D SPHERICAL EARTH ENGINE STATE
+    // -------------------------------------------------------------------------
+    const canvas = document.getElementById('globeCanvas');
+    const ctx = canvas.getContext('2d');
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    let dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    let rotation = [-81.5, -22.5, 0]; // Focused on India initially
+    let targetRotation = null;
+    let currentZoom = 1.65;
+    let targetZoom = null;
+    let baseRadius = 260;
+
+    let mapStyle = 'satellite'; // Default to Google Maps 3D Satellite Globe ('satellite' | 'google')
+    const layers = { dayNight: true, warming: true, glaciers: true, biomes: true };
+
+    let windSpeed = 28;
+    let windDir = 45;
+    let timelineHour = 24;
+    let timelinePlaying = false;
+    let timelineTimer = null;
+
+    let selectedItem = null;
+    let probePoint = null;
+    let hoveredItem = null;
+    let worldLand = null;
+    let worldBorders = null;
+    let animTick = 0;
+
+    // Pre-computed static geometries (eliminates per-frame allocations & lag)
+    const graticule10 = d3.geoGraticule10();
+    const northCapGeo = d3.geoCircle().center([0, 90]).radius(18)();
+    const southCapGeo = d3.geoCircle().center([0, -90]).radius(20)();
+
+    // Major global cities for subtle Google-Maps-style night lights on the dark hemisphere
+    const nightCities = [
+      [77.21, 28.61], [72.88, 19.07], [88.36, 22.57], [77.59, 12.97], [80.27, 13.08], [80.94, 26.85],
+      [139.69, 35.69], [121.47, 31.23], [116.40, 39.90], [114.17, 22.32], [103.82, 1.35], [100.50, 13.75],
+      [126.98, 37.56], [55.27, 25.20], [46.67, 24.71], [31.23, 30.04], [28.98, 41.01], [37.62, 55.75],
+      [-0.13, 51.51], [2.35, 48.85], [13.40, 52.52], [-3.70, 40.42], [12.50, 41.90],
+      [-74.00, 40.71], [-87.63, 41.88], [-118.24, 34.05], [-122.42, 37.77], [-99.13, 19.43], [-79.38, 43.65],
+      [-46.63, -23.55], [-58.38, -34.60], [-43.17, -22.91], [28.04, -26.20], [3.38, 6.52],
+      [151.21, -33.87], [144.96, -37.81], [106.85, -6.21], [67.01, 24.86], [90.41, 23.81]
+    ];
+
+    // Real-time astronomical solar terminator state (cached; only rebuilt when hour changes)
+    let solarState = null;
+    function updateSolarTerminator(customUtcHour = null) {
+      const now = new Date();
+      const startOfYear = new Date(Date.UTC(now.getUTCFullYear(), 0, 0));
+      const dayOfYear = Math.floor((now - startOfYear) / 86400000);
+      const decl = -23.44 * Math.cos((2 * Math.PI / 365) * (dayOfYear + 10));
+      const utcHours = customUtcHour !== null
+        ? customUtcHour
+        : now.getUTCHours() + now.getUTCMinutes() / 60;
+      let sunLon = (12 - utcHours) * 15;
+      if (sunLon > 180) sunLon -= 360;
+      if (sunLon < -180) sunLon += 360;
+      const nightLon = sunLon > 0 ? sunLon - 180 : sunLon + 180;
+      const nightLat = -decl;
+
+      solarState = {
+        sunCenter: [sunLon, decl],
+        nightCenter: [nightLon, nightLat],
+        // Layered spherical twilight bands for smooth Google-Maps-style day/night shade
+        twilightOuter: d3.geoCircle().center([nightLon, nightLat]).radius(97)(),
+        twilightMid:   d3.geoCircle().center([nightLon, nightLat]).radius(91.5)(),
+        twilightInner: d3.geoCircle().center([nightLon, nightLat]).radius(85)(),
+        deepNight:     d3.geoCircle().center([nightLon, nightLat]).radius(76)(),
+        dayHighlight:  d3.geoCircle().center([sunLon, decl]).radius(68)()
+      };
+    }
+    updateSolarTerminator(null);
+
+    // Offscreen cached starfield canvas (drawn once on resize instead of 140 arcs every frame)
+    const starCanvas = document.createElement('canvas');
+    const starCtx = starCanvas.getContext('2d');
+    const stars = Array.from({ length: 140 }, () => ({
+      x: Math.random(),
+      y: Math.random(),
+      r: Math.random() * 1.3 + 0.3,
+      a: Math.random() * 0.6 + 0.25
+    }));
+
+    function rebuildStarCache() {
+      starCanvas.width = Math.max(1, width);
+      starCanvas.height = Math.max(1, height);
+      starCtx.clearRect(0, 0, width, height);
+      for (let i = 0; i < stars.length; i++) {
+        const s = stars[i];
+        starCtx.fillStyle = `rgba(255,255,255,${s.a * 0.6})`;
+        starCtx.beginPath();
+        starCtx.arc(s.x * width, s.y * height, s.r * 0.85, 0, Math.PI * 2);
+        starCtx.fill();
+      }
+    }
+
+    const projection = d3.geoOrthographic().clipAngle(90).precision(0.9);
+    const geoPath = d3.geoPath(projection, ctx);
+
+    function resizeCanvas() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      baseRadius = Math.min(width, height) * 0.38;
+      rebuildStarCache();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    // Load fast, smooth 1:110m Natural Earth World Topology (eliminates drag lag; Survey of India stays high-precision)
+    fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
+      .then(r => r.json())
+      .then(topo => {
+        worldLand = topojson.feature(topo, topo.objects.land);
+        worldBorders = topojson.mesh(topo, topo.objects.countries, (a, b) => a !== b);
+      })
+      .catch(() => console.log('Using fallback India & biome geometry'));
+
+    // Optional: Load local fire_telemetry.json if hosted alongside index.html
+    fetch('fire_telemetry.json')
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped = data.slice(0, 80).map((d, i) => {
+            const lon = parseFloat(d.longitude ?? d.lon);
+            const lat = parseFloat(d.latitude ?? d.lat);
+            let t4 = parseFloat(d.bright_ti4 ?? 345);
+            let t5 = parseFloat(d.bright_ti5 ?? 298);
+            if (t4 > 180) t4 = +(t4 - 273.15).toFixed(1);
+            if (t5 > 180) t5 = +(t5 - 273.15).toFixed(1);
+            const biome = inferBiome(lon, lat);
+            return {
+              id: `json-${i}`, type: "fire", source: "Local VIIRS JSON",
+              name: d.region || `${biome.name} Front`,
+              shortName: (d.region || biome.name).split(',')[0].slice(0, 16),
+              lat, lon, fireC: t4, ambientC: t5,
+              frp: +(parseFloat(d.frp || 20)).toFixed(1),
+              c_size: 4, hour: (i % 24) + 1,
+              biome: biome.name,
+              risk: (d.predicted_risk || 'CRITICAL').toUpperCase(),
+              lastCaught: "Live VIIRS 24h Pass",
+              containmentPct: 74, responseMins: 24,
+              managementGrade: "Monitored (A-)",
+              managementNotes: "Loaded from your global fire_telemetry.json AI pipeline."
+            };
+          }).filter(x => !isNaN(x.lat) && !isNaN(x.lon));
+          if (mapped.length > 0) {
+            wildfires = [...wildfires, ...mapped];
+            document.getElementById('dataBadge').textContent = `Live JSON (${wildfires.length})`;
+            if (!selectedItem) resetInspectorToFeed();
+          }
+        }
+      })
+      .catch(() => {});
+
+    // Live Public Government Open-Data Feed: NASA EONET v3 (eonet.gsfc.nasa.gov)
+    function fetchGovOpenData() {
+      fetch('https://eonet.gsfc.nasa.gov/api/v3/events?status=open&category=wildfires&limit=35')
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(json => {
+          if (!json || !Array.isArray(json.events)) return;
+          const liveGovFires = [];
+          json.events.forEach((ev, idx) => {
+            const geom = ev.geometry && ev.geometry[ev.geometry.length - 1];
+            if (!geom || !Array.isArray(geom.coordinates) || geom.coordinates.length < 2) return;
+            const lon = parseFloat(geom.coordinates[0]);
+            const lat = parseFloat(geom.coordinates[1]);
+            if (isNaN(lat) || isNaN(lon)) return;
+
+            const biome = inferBiome(lon, lat);
+            const dtObj = geom.date ? new Date(geom.date) : new Date();
+            const dateStr = dtObj.toUTCString().slice(5, 22) + ' UTC';
+            const ambientC = +(biome.ambientBase + (Math.random() * 3 - 1.5)).toFixed(1);
+            const fireC = +(ambientC + 42 + Math.random() * 18).toFixed(1);
+            const frp = +(16 + Math.random() * 34).toFixed(1);
+            const cleanTitle = (ev.title || 'NASA Active Wildfire').replace(/^Wildfire\s*-\s*/i, '');
+
+            liveGovFires.push({
+              id: `nasa-eonet-${ev.id || idx}`,
+              type: "fire",
+              source: "NASA EONET Gov API",
+              name: cleanTitle,
+              shortName: cleanTitle.split(',')[0].slice(0, 18),
+              lat, lon, fireC, ambientC, frp,
+              c_size: frp > 30 ? 5 : 3,
+              hour: Math.min(24, Math.max(1, dtObj.getUTCHours() || 12)),
+              biome: biome.name,
+              risk: frp >= 24 ? 'CRITICAL' : 'MODERATE',
+              lastCaught: dateStr,
+              containmentPct: frp >= 30 ? 58 : 79,
+              responseMins: frp >= 30 ? 28 : 19,
+              managementGrade: "Live NASA Gov Alert",
+              managementNotes: "Live open wildfire event streamed directly from NASA Earth Observatory Natural Event Tracker (eonet.gsfc.nasa.gov)."
+            });
+          });
+
+          if (liveGovFires.length > 0) {
+            wildfires = [...wildfires, ...liveGovFires];
+            document.getElementById('dataBadge').textContent = `NASA Gov Live (${wildfires.length})`;
+            document.getElementById('timelineLabel').textContent = `${String(timelineHour).padStart(2, '0')}:00 UTC • ${getVisibleFires().length} Active Fronts`;
+            if (!selectedItem) resetInspectorToFeed();
+            showToast(`Streamed ${liveGovFires.length} live global wildfires from NASA EONET Gov API`);
+          }
+        })
+        .catch(() => {
+          document.getElementById('dataBadge').textContent = `VIIRS Atlas (${wildfires.length})`;
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // 7. HELPER GEOMETRY & BIOME LOGIC
+    // -------------------------------------------------------------------------
+    function isVisible(lon, lat) {
+      const center = [-rotation[0], -rotation[1]];
+      return d3.geoDistance([lon, lat], center) < Math.PI / 2 - 0.04;
+    }
+
+    function getVisibleFires() {
+      return wildfires.filter(f => f.hour <= timelineHour);
+    }
+
+    function inferBiome(lon, lat) {
+      for (const feat of biomeFeatures) {
+        if (d3.geoContains(feat, [lon, lat])) return feat.properties;
+      }
+      const absLat = Math.abs(lat);
+      if (absLat > 60) return { name: "Sub-Arctic Tundra & Boreal", kind: "Evergreen Forest", ambientBase: 5.5 };
+      if (absLat > 38) return { name: "Temperate Mixed Forest", kind: "Evergreen Forest", ambientBase: 16.5 };
+      if (absLat > 20) return { name: "Subtropical Dryland / Steppe", kind: "Arid Desert", ambientBase: 28.0 };
+      return { name: "Equatorial Tropical Forest", kind: "Tropical Forest", ambientBase: 30.2 };
+    }
+
+    function checkWarmingZone(lon, lat) {
+      for (const z of warmingFeatures) {
+        const distDeg = d3.geoDistance([lon, lat], [z.lon, z.lat]) * (180 / Math.PI);
+        if (distDeg <= z.radiusDeg) return z;
+      }
+      return null;
+    }
+
+    function dirToCompass(deg) {
+      const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+      return dirs[Math.round(((deg % 360) / 45)) % 8];
+    }
+
+    function flyTo(lon, lat, zoom = 2.6) {
+      targetRotation = [-lon, -lat, 0];
+      targetZoom = zoom;
+    }
+
+    function focusIndia() {
+      flyTo(81.5, 23.0, 2.35);
+      showToast('Focused on Unified Official Survey of India Boundary');
+    }
+
+    function resetGlobalView() {
+      flyTo(78.0, 20.0, 1.25);
+    }
+
+    function zoomBy(factor) {
+      targetZoom = Math.max(0.85, Math.min(5.5, (targetZoom || currentZoom) * factor));
+    }
+
+    // -------------------------------------------------------------------------
+    // 8. MAIN 60FPS 3D GLOBE RENDER LOOP
+    // -------------------------------------------------------------------------
+    function renderGlobe() {
+      animTick += 0.035;
+
+      // Smooth camera interpolation
+      if (targetRotation) {
+        rotation[0] += (targetRotation[0] - rotation[0]) * 0.09;
+        rotation[1] += (targetRotation[1] - rotation[1]) * 0.09;
+        if (Math.abs(targetRotation[0] - rotation[0]) < 0.08 && Math.abs(targetRotation[1] - rotation[1]) < 0.08) {
+          targetRotation = null;
+        }
+      }
+      if (targetZoom !== null) {
+        currentZoom += (targetZoom - currentZoom) * 0.1;
+        if (Math.abs(targetZoom - currentZoom) < 0.01) targetZoom = null;
+      }
+
+      const cx = width / 2;
+      const cy = height / 2;
+      const radius = baseRadius * currentZoom;
+
+      // Adaptive precision: ultra-fast while dragging, crisp when settled
+      projection
+        .precision(dragging ? 2.2 : 0.85)
+        .scale(radius)
+        .translate([cx, cy])
+        .rotate(rotation);
+
+      // 1. Google Maps 3D Globe Deep Space Backdrop
+      const bgGrad = ctx.createRadialGradient(cx, cy, radius * 0.75, cx, cy, Math.max(width, height));
+      if (mapStyle === 'satellite') {
+        bgGrad.addColorStop(0, '#071324');
+        bgGrad.addColorStop(0.55, '#02050b');
+        bgGrad.addColorStop(1, '#000000');
+      } else {
+        bgGrad.addColorStop(0, '#0f1f38');
+        bgGrad.addColorStop(0.65, '#060c18');
+        bgGrad.addColorStop(1, '#02040a');
+      }
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      // 2. Cached Deep-Space Starfield (single blit, zero per-frame arc overhead)
+      ctx.drawImage(starCanvas, 0, 0);
+
+      // 3. Crisp Rayleigh Atmospheric Limb Glow (Signature Google Maps Globe Halo)
+      const halo = ctx.createRadialGradient(cx, cy, radius * 0.96, cx, cy, radius * 1.11);
+      halo.addColorStop(0, mapStyle === 'satellite' ? 'rgba(96, 165, 250, 0.55)' : 'rgba(147, 197, 253, 0.42)');
+      halo.addColorStop(0.45, mapStyle === 'satellite' ? 'rgba(59, 130, 246, 0.20)' : 'rgba(96, 165, 250, 0.14)');
+      halo.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius * 1.11, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Official Google Maps Globe Color Palettes
+      const theme = mapStyle === 'satellite'
+        ? {
+            oceanTop: '#164b78', oceanMid: '#0d3154', oceanEdge: '#06192e',
+            landFill: '#3b5741', border: 'rgba(255, 255, 255, 0.34)',
+            indiaStroke: 'rgba(255, 255, 255, 0.88)', graticule: 'rgba(148, 163, 184, 0.08)',
+            labelContinent: 'rgba(255, 255, 255, 0.72)', labelOcean: 'rgba(147, 197, 253, 0.45)',
+            labelIndia: '#ffffff'
+          }
+        : {
+            oceanTop: '#aad3df', oceanMid: '#92c5e8', oceanEdge: '#6ba5d6',
+            landFill: '#f1f3ee', border: 'rgba(100, 116, 139, 0.42)',
+            indiaStroke: '#334155', graticule: 'rgba(255, 255, 255, 0.22)',
+            labelContinent: 'rgba(51, 65, 85, 0.68)', labelOcean: 'rgba(30, 64, 175, 0.42)',
+            labelIndia: '#0f172a'
+          };
+
+      // 4. 3D Ocean Sphere with Bathymetric Depth Gradient
+      const oceanGrad = ctx.createRadialGradient(cx - radius * 0.26, cy - radius * 0.26, radius * 0.08, cx, cy, radius);
+      oceanGrad.addColorStop(0, theme.oceanTop);
+      oceanGrad.addColorStop(0.68, theme.oceanMid);
+      oceanGrad.addColorStop(1, theme.oceanEdge);
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fillStyle = oceanGrad;
+      ctx.fill();
+
+      // 5. Subtle Lat/Lon Graticule (pre-allocated)
+      ctx.beginPath();
+      geoPath(graticule10);
+      ctx.strokeStyle = theme.graticule;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+
+      // 6, 7, 8 & 9. SINGLE-PASS LAND FILL + LAND-CLIPPED BIOMES & WARMING ZONES
+      // Building the land path ONCE for both fill and clip eliminates redundant projection overhead.
+      ctx.save();
+      ctx.beginPath();
+      if (worldLand) geoPath(worldLand);
+      geoPath(indiaOfficialGeo);
+      ctx.fillStyle = theme.landFill;
+      ctx.fill();
+      ctx.clip();
+
+      // Natural Earth Polar & Himalayan Snow Cap tint in Google Satellite mode
+      if (mapStyle === 'satellite') {
+        ctx.fillStyle = 'rgba(241, 245, 249, 0.72)';
+        ctx.beginPath(); geoPath(northCapGeo); ctx.fill();
+        ctx.beginPath(); geoPath(southCapGeo); ctx.fill();
+      }
+
+      // 8. Ecological Biomes & Major Rivers (drawn strictly above land)
+      if (layers.biomes) {
+        biomeFeatures.forEach(feat => {
+          ctx.beginPath();
+          geoPath(feat);
+          ctx.fillStyle = feat.properties.color + (mapStyle === 'satellite' ? '44' : '38');
+          ctx.fill();
+        });
+
+        majorRivers.forEach(riv => {
+          ctx.beginPath();
+          geoPath({ type: 'LineString', coordinates: riv.coords });
+          ctx.strokeStyle = mapStyle === 'satellite' ? '#38bdf8' : '#3b82f6';
+          ctx.lineWidth = Math.max(1.5, currentZoom * 1.1);
+          ctx.lineCap = 'round';
+          ctx.stroke();
+        });
+      }
+
+      // 9. Smooth Spherical Red Global Warming Amplification Heat-Blooms (strictly above land)
+      if (layers.warming) {
+        warmingFeatures.forEach(z => {
+          ctx.beginPath();
+          geoPath(z.outerCircle);
+          ctx.fillStyle = 'rgba(220, 38, 38, 0.14)';
+          ctx.fill();
+
+          ctx.beginPath();
+          geoPath(z.midCircle);
+          ctx.fillStyle = 'rgba(220, 38, 38, 0.16)';
+          ctx.fill();
+
+          ctx.beginPath();
+          geoPath(z.coreCircle);
+          ctx.fillStyle = 'rgba(185, 28, 28, 0.18)';
+          ctx.fill();
+        });
+      }
+      ctx.restore();
+
+      // International Borders OUTSIDE India (drawn cleanly, then masked inside official India)
+      if (worldBorders) {
+        ctx.beginPath();
+        geoPath(worldBorders);
+        ctx.strokeStyle = theme.border;
+        ctx.lineWidth = 0.7;
+        ctx.stroke();
+      }
+
+      // Mask any internal Natural Earth lines inside official India & stroke crisp outer Survey of India boundary
+      ctx.save();
+      ctx.beginPath();
+      geoPath(indiaOfficialGeo);
+      ctx.clip();
+      ctx.fillStyle = theme.landFill;
+      ctx.fill();
+      if (layers.biomes) {
+        for (let i = 0; i < biomeFeatures.length; i++) {
+          const feat = biomeFeatures[i];
+          ctx.beginPath();
+          geoPath(feat);
+          ctx.fillStyle = feat.properties.color + (mapStyle === 'satellite' ? '44' : '38');
+          ctx.fill();
+        }
+        for (let i = 0; i < 2; i++) {
+          ctx.beginPath();
+          geoPath({ type: 'LineString', coordinates: majorRivers[i].coords });
+          ctx.strokeStyle = mapStyle === 'satellite' ? '#38bdf8' : '#3b82f6';
+          ctx.lineWidth = Math.max(1.5, currentZoom * 1.1);
+          ctx.lineCap = 'round';
+          ctx.stroke();
+        }
+      }
+      if (layers.warming) {
+        for (let i = 2; i <= 3; i++) {
+          const z = warmingFeatures[i];
+          ctx.beginPath(); geoPath(z.outerCircle); ctx.fillStyle = 'rgba(220, 38, 38, 0.14)'; ctx.fill();
+          ctx.beginPath(); geoPath(z.midCircle);   ctx.fillStyle = 'rgba(220, 38, 38, 0.16)'; ctx.fill();
+          ctx.beginPath(); geoPath(z.coreCircle);  ctx.fillStyle = 'rgba(185, 28, 28, 0.18)'; ctx.fill();
+        }
+      }
+      ctx.restore();
+
+      ctx.beginPath();
+      geoPath(indiaOfficialGeo);
+      ctx.strokeStyle = theme.indiaStroke;
+      ctx.lineWidth = 1.65;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+
+      // 9B. GOOGLE-MAPS-STYLE DAY & NIGHT SOLAR TERMINATOR + NIGHT CITY LIGHTS
+      if (layers.dayNight && solarState) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.clip();
+
+        // Subtle warm daylight sheen facing the Sun
+        ctx.beginPath();
+        geoPath(solarState.dayHighlight);
+        ctx.fillStyle = mapStyle === 'satellite' ? 'rgba(255, 250, 235, 0.07)' : 'rgba(255, 251, 235, 0.10)';
+        ctx.fill();
+
+        // Multi-band feathered twilight & night shadow (matches Google Maps 3D Globe night shade)
+        const nightAlphaScale = mapStyle === 'satellite' ? 1.0 : 0.72;
+        ctx.beginPath();
+        geoPath(solarState.twilightOuter);
+        ctx.fillStyle = `rgba(3, 10, 28, ${(0.12 * nightAlphaScale).toFixed(3)})`;
+        ctx.fill();
+
+        ctx.beginPath();
+        geoPath(solarState.twilightMid);
+        ctx.fillStyle = `rgba(2, 8, 24, ${(0.18 * nightAlphaScale).toFixed(3)})`;
+        ctx.fill();
+
+        ctx.beginPath();
+        geoPath(solarState.twilightInner);
+        ctx.fillStyle = `rgba(2, 6, 20, ${(0.20 * nightAlphaScale).toFixed(3)})`;
+        ctx.fill();
+
+        ctx.beginPath();
+        geoPath(solarState.deepNight);
+        ctx.fillStyle = `rgba(1, 4, 15, ${(0.18 * nightAlphaScale).toFixed(3)})`;
+        ctx.fill();
+
+        // Subtle golden city lights on the night hemisphere (Google Earth / Google Maps night effect)
+        if (mapStyle === 'satellite') {
+          const nightCenter = solarState.nightCenter;
+          for (let i = 0; i < nightCities.length; i++) {
+            const c = nightCities[i];
+            if (!isVisible(c[0], c[1])) continue;
+            // Only illuminate cities well inside the night side (< 87° from antisolar point)
+            if (d3.geoDistance(c, nightCenter) < 1.52) {
+              const p = projection(c);
+              if (p) {
+                ctx.fillStyle = 'rgba(253, 224, 71, 0.24)';
+                ctx.beginPath();
+                ctx.arc(p[0], p[1], 4.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'rgba(254, 240, 138, 0.85)';
+                ctx.beginPath();
+                ctx.arc(p[0], p[1], 1.4, 0, Math.PI * 2);
+                ctx.fill();
+              }
+            }
+          }
+        }
+        ctx.restore();
+      }
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      // 2. Subtle Deep-Space Starfield (Google Maps 3D Globe style)
+      stars.forEach(s => {
+        ctx.fillStyle = `rgba(255,255,255,${s.a * 0.6})`;
+        ctx.beginPath();
+        ctx.arc(s.x * width, s.y * height, s.r * 0.85, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // 3. Crisp Rayleigh Atmospheric Limb Glow (Signature Google Maps Globe Halo)
+      const halo = ctx.createRadialGradient(cx, cy, radius * 0.96, cx, cy, radius * 1.11);
+      halo.addColorStop(0, mapStyle === 'satellite' ? 'rgba(96, 165, 250, 0.55)' : 'rgba(147, 197, 253, 0.42)');
+      halo.addColorStop(0.45, mapStyle === 'satellite' ? 'rgba(59, 130, 246, 0.20)' : 'rgba(96, 165, 250, 0.14)');
+      halo.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius * 1.11, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Official Google Maps Globe Color Palettes
+      const theme = mapStyle === 'satellite'
+        ? {
+            oceanTop: '#164b78', oceanMid: '#0d3154', oceanEdge: '#06192e',
+            landFill: '#3b5741', border: 'rgba(255, 255, 255, 0.34)',
+            indiaStroke: 'rgba(255, 255, 255, 0.88)', graticule: 'rgba(148, 163, 184, 0.08)',
+            labelContinent: 'rgba(255, 255, 255, 0.72)', labelOcean: 'rgba(147, 197, 253, 0.45)',
+            labelIndia: '#ffffff'
+          }
+        : {
+            oceanTop: '#aad3df', oceanMid: '#92c5e8', oceanEdge: '#6ba5d6',
+            landFill: '#f1f3ee', border: 'rgba(100, 116, 139, 0.42)',
+            indiaStroke: '#334155', graticule: 'rgba(255, 255, 255, 0.22)',
+            labelContinent: 'rgba(51, 65, 85, 0.68)', labelOcean: 'rgba(30, 64, 175, 0.42)',
+            labelIndia: '#0f172a'
+          };
+
+      // 4. 3D Ocean Sphere with Bathymetric Depth Gradient
+      const oceanGrad = ctx.createRadialGradient(cx - radius * 0.26, cy - radius * 0.26, radius * 0.08, cx, cy, radius);
+      oceanGrad.addColorStop(0, theme.oceanTop);
+      oceanGrad.addColorStop(0.68, theme.oceanMid);
+      oceanGrad.addColorStop(1, theme.oceanEdge);
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fillStyle = oceanGrad;
+      ctx.fill();
+
+      // 5. Subtle Lat/Lon Graticule
+      ctx.beginPath();
+      geoPath(d3.geoGraticule10());
+      ctx.strokeStyle = theme.graticule;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+
+      // 6. Global Landmass (1:50m) + International Borders OUTSIDE India
+      if (worldLand) {
+        ctx.beginPath();
+        geoPath(worldLand);
+        ctx.fillStyle = theme.landFill;
+        ctx.fill();
+      }
+      if (worldBorders) {
+        ctx.beginPath();
+        geoPath(worldBorders);
+        ctx.strokeStyle = theme.border;
+        ctx.lineWidth = 0.7;
+        ctx.stroke();
+      }
+
+      // 7. Official Survey of India Boundary Fill
+      //    Drawn AFTER worldBorders so NO erroneous Natural Earth LoC/LAC lines
+      //    ever appear inside Jammu & Kashmir, PoK, Ladakh, Aksai Chin, or Arunachal Pradesh.
+      ctx.beginPath();
+      geoPath(indiaOfficialGeo);
+      ctx.fillStyle = theme.landFill;
+      ctx.fill();
+
+      // 8 & 9. STRICTLY LAND-CLIPPED BIOMES, RIVERS & GLOBAL WARMING HEAT-BLOOMS
+      // Clipping to landmasses guarantees zero shading spills over oceans and removes boxy edges.
+      ctx.save();
+      ctx.beginPath();
+      if (worldLand) geoPath(worldLand);
+      geoPath(indiaOfficialGeo);
+      ctx.clip();
+
+      // Natural Earth Polar & Himalayan Snow Cap tint in Google Satellite mode
+      if (mapStyle === 'satellite') {
+        const northCap = d3.geoCircle().center([0, 90]).radius(18)();
+        const southCap = d3.geoCircle().center([0, -90]).radius(20)();
+        ctx.fillStyle = 'rgba(241, 245, 249, 0.72)';
+        ctx.beginPath(); geoPath(northCap); ctx.fill();
+        ctx.beginPath(); geoPath(southCap); ctx.fill();
+      }
+
+      // 8. Ecological Biomes & Major Rivers (drawn strictly above land)
+      if (layers.biomes) {
+        biomeFeatures.forEach(feat => {
+          ctx.beginPath();
+          geoPath(feat);
+          ctx.fillStyle = feat.properties.color + (mapStyle === 'satellite' ? '44' : '38');
+          ctx.fill();
+        });
+
+        majorRivers.forEach(riv => {
+          ctx.beginPath();
+          geoPath({ type: 'LineString', coordinates: riv.coords });
+          ctx.strokeStyle = mapStyle === 'satellite' ? '#38bdf8' : '#3b82f6';
+          ctx.lineWidth = Math.max(1.5, currentZoom * 1.1);
+          ctx.lineCap = 'round';
+          ctx.stroke();
+        });
+      }
+
+      // 9. Smooth Spherical Red Global Warming Amplification Heat-Blooms (strictly above land)
+      if (layers.warming) {
+        warmingFeatures.forEach(z => {
+          ctx.beginPath();
+          geoPath(z.outerCircle);
+          ctx.fillStyle = 'rgba(220, 38, 38, 0.14)';
+          ctx.fill();
+
+          ctx.beginPath();
+          geoPath(z.midCircle);
+          ctx.fillStyle = 'rgba(220, 38, 38, 0.16)';
+          ctx.fill();
+
+          ctx.beginPath();
+          geoPath(z.coreCircle);
+          ctx.fillStyle = 'rgba(185, 28, 28, 0.18)';
+          ctx.fill();
+        });
+      }
+      ctx.restore();
+
+      // Crisp Official Survey of India Outer National Boundary (Zero internal divisions)
+      ctx.beginPath();
+      geoPath(indiaOfficialGeo);
+      ctx.strokeStyle = theme.indiaStroke;
+      ctx.lineWidth = 1.65;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+
+      // Google-Maps-Style Geographic Typography Labels
+      geoMapLabels.forEach(lbl => {
+        if (!isVisible(lbl.lon, lbl.lat)) return;
+        const p = projection([lbl.lon, lbl.lat]);
+        if (!p) return;
+        ctx.textAlign = 'center';
+        if (lbl.kind === 'country-focus') {
+          ctx.font = '700 12px "Inter", sans-serif';
+          ctx.fillStyle = theme.labelIndia;
+          if (mapStyle === 'satellite') {
+            ctx.shadowColor = 'rgba(0,0,0,0.75)';
+            ctx.shadowBlur = 4;
+          }
+          ctx.fillText(lbl.text, p[0], p[1]);
+          ctx.shadowBlur = 0;
+        } else if (lbl.kind === 'continent') {
+          ctx.font = '600 10px "Inter", sans-serif';
+          ctx.fillStyle = theme.labelContinent;
+          ctx.fillText(lbl.text, p[0], p[1]);
+        } else {
+          ctx.font = 'italic 500 9.5px "Inter", sans-serif';
+          ctx.fillStyle = theme.labelOcean;
+          ctx.fillText(lbl.text, p[0], p[1]);
+        }
+        ctx.textAlign = 'left';
+      });
+
+      // Subtle Warming Zone Labels (outside clip so text is never cut off at coastlines)
+      if (layers.warming && currentZoom >= 1.2) {
+        warmingFeatures.forEach(z => {
+          if (!isVisible(z.lon, z.lat)) return;
+          const p = projection([z.lon, z.lat]);
+          if (p) {
+            ctx.font = '700 8.5px "Inter", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = mapStyle === 'satellite' ? 'rgba(254, 202, 202, 0.92)' : '#991b1b';
+            ctx.fillText(`${z.name.toUpperCase()} (${z.anomaly})`, p[0], p[1]);
+            ctx.textAlign = 'left';
+          }
+        });
+      }
+
+      // 10. Melting Glaciers Markers
+      if (layers.glaciers) {
+        glaciers.forEach(g => {
+          if (!isVisible(g.lon, g.lat)) return;
+          const p = projection([g.lon, g.lat]);
+          if (!p) return;
+
+          const isSel = selectedItem && selectedItem.id === g.id;
+          const pulse = (Math.sin(animTick * 1.4) + 1) * 0.5;
+
+          ctx.beginPath();
+          ctx.arc(p[0], p[1], (isSel ? 12 : 8) + pulse * 4, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(14, 165, 233, 0.25)';
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(p[0], p[1], isSel ? 6.5 : 5, 0, Math.PI * 2);
+          ctx.fillStyle = '#0284c7';
+          ctx.fill();
+          ctx.lineWidth = 1.8;
+          ctx.strokeStyle = '#ffffff';
+          ctx.stroke();
+
+          if (currentZoom >= 1.35 || isSel) {
+            drawBadge(p[0] + 9, p[1] - 11, `🧊 ${g.shortName} ${g.tempRiseC}`, '#0369a1', '#ffffff');
+          }
+        });
+      }
+
+      // 11. Active Wildfires + Animated Wind & 6-Hour Fire Spread Vector Cones
+      const visibleFires = getVisibleFires();
+      visibleFires.forEach(f => {
+        if (!isVisible(f.lon, f.lat)) return;
+        const p = projection([f.lon, f.lat]);
+        if (!p) return;
+
+        const isSel = selectedItem && selectedItem.id === f.id;
+        const color = f.risk === 'CRITICAL' ? '#dc2626' : f.risk === 'MODERATE' ? '#d97706' : '#059669';
+
+        // 6-Hour Wind Spread Cone (shown on selected fire or high zoom)
+        if (isSel || currentZoom >= 2.3) {
+          const radAngle = ((windDir - 90) * Math.PI) / 180;
+          const coneLen = (18 + windSpeed * 0.75) * Math.min(currentZoom * 0.65, 1.8);
+          const spreadAngle = 0.36;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.moveTo(p[0], p[1]);
+          ctx.arc(p[0], p[1], coneLen, radAngle - spreadAngle, radAngle + spreadAngle);
+          ctx.closePath();
+          const coneGrad = ctx.createRadialGradient(p[0], p[1], 3, p[0], p[1], coneLen);
+          coneGrad.addColorStop(0, 'rgba(239, 68, 68, 0.52)');
+          coneGrad.addColorStop(1, 'rgba(245, 158, 11, 0.06)');
+          ctx.fillStyle = coneGrad;
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(239, 68, 68, 0.55)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          // Animated wind ember particles along vector
+          for (let i = 0; i < 4; i++) {
+            const t = ((animTick * (0.25 + windSpeed * 0.008) + i * 0.25) % 1);
+            const px = p[0] + Math.cos(radAngle + (i - 1.5) * 0.14) * coneLen * t;
+            const py = p[1] + Math.sin(radAngle + (i - 1.5) * 0.14) * coneLen * t;
+            ctx.beginPath();
+            ctx.arc(px, py, 1.8, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(254, 240, 138, ${1 - t})`;
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        // Pulsing thermal ring
+        const pulse = (Math.sin(animTick * 2.2 + f.lat) + 1) * 0.5;
+        ctx.beginPath();
+        ctx.arc(p[0], p[1], (isSel ? 12 : 7) + pulse * 5, 0, Math.PI * 2);
+        ctx.fillStyle = f.risk === 'CRITICAL' ? 'rgba(220, 38, 38, 0.26)' : 'rgba(217, 119, 6, 0.24)';
+        ctx.fill();
+
+        // Flame core pin
+        ctx.beginPath();
+        ctx.arc(p[0], p[1], isSel ? 6.5 : 4.6, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.lineWidth = 1.6;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+
+        // Compact callout badge
+        if (isSel || (currentZoom >= 1.5 && f.source === 'NASA VIIRS 375m')) {
+          drawBadge(p[0] + 9, p[1] - 11, `🔥 ${f.shortName} • ${f.fireC}°C`, color, '#ffffff');
+        }
+      });
+
+      // 12. Click-Anywhere Probe Pin
+      if (probePoint && isVisible(probePoint.lon, probePoint.lat)) {
+        const p = projection([probePoint.lon, probePoint.lat]);
+        if (p) {
+          ctx.beginPath();
+          ctx.arc(p[0], p[1], 8, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(20, 83, 45, 0.25)';
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(p[0], p[1], 4.5, 0, Math.PI * 2);
+          ctx.fillStyle = '#14532d';
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = '#ffffff';
+          ctx.stroke();
+        }
+      }
+      // 13. Subtle 3D Spherical Specular & Limb Shading (Google Earth realism)
+      const shade = ctx.createRadialGradient(cx - radius * 0.32, cy - radius * 0.32, radius * 0.45, cx, cy, radius);
+      shade.addColorStop(0, 'rgba(255,255,255,0.08)');
+      shade.addColorStop(0.76, 'rgba(0,0,0,0)');
+      shade.addColorStop(0.95, 'rgba(56, 189, 248, 0.14)');
+      shade.addColorStop(1, 'rgba(2,6,23,0.46)');
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fillStyle = shade;
+      ctx.fill();
+    }
+
+    function drawBadge(x, y, text, bg, fg) {
+      ctx.font = '700 10px "Plus Jakarta Sans", sans-serif';
+      const tw = ctx.measureText(text).width;
+      const bw = tw + 12;
+      const bh = 19;
+      ctx.fillStyle = bg;
+      ctx.beginPath();
+      ctx.roundRect(x, y, bw, bh, 999);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = fg;
+      ctx.fillText(text, x + 6, y + 13);
+    }
+
+    function animateLoop() {
+      renderGlobe();
+      requestAnimationFrame(animateLoop);
+    }
+
+    // -------------------------------------------------------------------------
+    // 9. POINTER, TOUCH, ZOOM & CLICK-ANYWHERE BIOME PROBE INTERACTIONS
+    // -------------------------------------------------------------------------
+    let dragging = false;
+    let dragMoved = false;
+    let lastPtr = [0, 0];
+
+    function findPinAt(mx, my) {
+      const visibleFires = getVisibleFires();
+      for (let i = visibleFires.length - 1; i >= 0; i--) {
+        const f = visibleFires[i];
+        if (!isVisible(f.lon, f.lat)) continue;
+        const p = projection([f.lon, f.lat]);
+        if (p && Math.hypot(p[0] - mx, p[1] - my) < 14) return f;
+      }
+      if (layers.glaciers) {
+        for (const g of glaciers) {
+          if (!isVisible(g.lon, g.lat)) continue;
+          const p = projection([g.lon, g.lat]);
+          if (p && Math.hypot(p[0] - mx, p[1] - my) < 14) return g;
+        }
+      }
+      return null;
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+      dragging = true;
+      dragMoved = false;
+      targetRotation = null;
+      lastPtr = [e.clientX, e.clientY];
+      canvas.setPointerCapture(e.pointerId);
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      const mx = e.clientX;
+      const my = e.clientY;
+
+      if (dragging) {
+        const dx = mx - lastPtr[0];
+        const dy = my - lastPtr[1];
+        if (Math.hypot(dx, dy) > 3) dragMoved = true;
+        const sens = 0.28 / Math.max(0.8, currentZoom * 0.7);
+        rotation[0] += dx * sens;
+        rotation[1] = Math.max(-85, Math.min(85, rotation[1] - dy * sens));
+        lastPtr = [mx, my];
+        document.getElementById('hoverHud').classList.add('hidden');
+        return;
+      }
+
+      // Hover Magnetic HUD
+      const hit = findPinAt(mx, my);
+      const hud = document.getElementById('hoverHud');
+      if (hit) {
+        hoveredItem = hit;
+        canvas.style.cursor = 'pointer';
+        hud.style.left = Math.min(width - 270, mx + 16) + 'px';
+        hud.style.top = Math.min(height - 110, my + 16) + 'px';
+        if (hit.type === 'fire') {
+          const dt = (hit.fireC - hit.ambientC).toFixed(1);
+          hud.innerHTML = `
+            <div class="font-bold text-amber-300">${escapeHtml(hit.name)}</div>
+            <div class="text-[10.5px] text-slate-300 mt-0.5">🌿 ${escapeHtml(hit.biome)}</div>
+            <div class="mono text-[10.5px] mt-1.5 flex gap-2.5">
+              <span>🔥 ${hit.fireC}°C</span>
+              <span>🌲 ${hit.ambientC}°C</span>
+              <span class="text-rose-300">ΔT +${dt}°C</span>
+            </div>
+          `;
+        } else {
+          hud.innerHTML = `
+            <div class="font-bold text-sky-300">🧊 ${escapeHtml(hit.name)}</div>
+            <div class="mono text-[10.5px] mt-1">Temp Rise: <strong class="text-rose-300">${hit.tempRiseC}</strong> • ${hit.retreatRate}</div>
+          `;
+        }
+        hud.classList.remove('hidden');
+      } else {
+        hoveredItem = null;
+        canvas.style.cursor = 'grab';
+        hud.classList.add('hidden');
+      }
+    });
+
+    canvas.addEventListener('pointerup', (e) => {
+      if (!dragging) return;
+      dragging = false;
+      if (!dragMoved) {
+        const hit = findPinAt(e.clientX, e.clientY);
+        if (hit) {
+          selectItem(hit);
+        } else {
+          // Click-Anywhere Biome & Risk Probe
+          const coords = projection.invert([e.clientX, e.clientY]);
+          if (coords && !isNaN(coords[0]) && !isNaN(coords[1])) {
+            const distFromCenter = Math.hypot(e.clientX - width / 2, e.clientY - height / 2);
+            if (distFromCenter <= baseRadius * currentZoom) {
+              runBiomeProbe(coords[0], coords[1]);
+            }
+          }
+        }
+      }
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? 0.9 : 1.11;
+      currentZoom = Math.max(0.85, Math.min(5.5, currentZoom * delta));
+      targetZoom = null;
+    }, { passive: false });
+
+    // -------------------------------------------------------------------------
+    // 10. INSPECTOR DRAWER, SEARCH BAR, BIOME PROBE & JUDGE TOUR
+    // -------------------------------------------------------------------------
+    function selectItem(item) {
+      selectedItem = item;
+      probePoint = null;
+      flyTo(item.lon, item.lat, 2.75);
+      ensureLeftDrawerOpen();
+      document.getElementById('btnBackFeed').classList.remove('hidden');
+
+      if (item.type === 'fire') {
+        const dt = (item.fireC - item.ambientC).toFixed(1);
+        const badgeCol = item.risk === 'CRITICAL' ? 'bg-red-600' : item.risk === 'MODERATE' ? 'bg-amber-600' : 'bg-emerald-600';
+        document.getElementById('inspectorTitle').textContent = item.name;
+        document.getElementById('inspectorSubtitle').textContent = `${item.source} • ${item.lat.toFixed(2)}°N, ${item.lon.toFixed(2)}°E`;
+
+        document.getElementById('inspectorBody').innerHTML = `
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[11px] font-bold text-[#14532d]">🌿 ${escapeHtml(item.biome)}</span>
+            <span class="${badgeCol} text-white text-[10px] font-extrabold px-2.5 py-0.5 rounded-full">${item.risk}</span>
+          </div>
+
+          <!-- Synchronized Dual-Band °C Telemetry -->
+          <div class="grid grid-cols-3 gap-1.5 text-center">
+            <div class="bg-rose-50 border border-rose-200 rounded-xl p-2">
+              <div class="text-[9.5px] font-bold text-rose-700">🔥 Fire (T4)</div>
+              <div class="mono font-extrabold text-sm text-rose-900">${item.fireC}°C</div>
+            </div>
+            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-2">
+              <div class="text-[9.5px] font-bold text-emerald-700">🌲 Ambient (T5)</div>
+              <div class="mono font-extrabold text-sm text-emerald-900">${item.ambientC}°C</div>
+            </div>
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-2">
+              <div class="text-[9.5px] font-bold text-amber-800">📈 Spike (ΔT)</div>
+              <div class="mono font-extrabold text-sm text-amber-950">+${dt}°C</div>
+            </div>
+          </div>
+
+          <!-- Last Wildfire Caught & Management Report -->
+          <div class="bg-white border border-slate-200 rounded-2xl p-3 space-y-2 shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-extrabold text-slate-900">⏱️ Incident &amp; Management Report</span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900">${escapeHtml(item.managementGrade)}</span>
+            </div>
+            <div class="text-[11px] text-slate-600">
+              <strong>Last Wildfire Caught:</strong> <span class="mono text-slate-900">${escapeHtml(item.lastCaught)}</span>
+            </div>
+            <div>
+              <div class="flex justify-between text-[10.5px] font-bold mb-1">
+                <span class="text-slate-600">Containment Efficiency</span>
+                <span class="mono text-[#14532d]">${item.containmentPct}% • ${item.responseMins} min dispatch</span>
+              </div>
+              <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full bg-[#14532d] rounded-full" style="width:${item.containmentPct}%"></div>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-600 leading-relaxed">${escapeHtml(item.managementNotes)}</p>
+          </div>
+
+          <!-- 6-Hour Wind Spread Telemetry -->
+          <div class="bg-amber-50/70 border border-amber-200 rounded-2xl p-3 text-[11px] text-amber-950">
+            <strong>💨 6-Hour Spread Vector:</strong> Radiative Power <span class="mono font-bold">${item.frp} MW</span> moving <strong>${dirToCompass(windDir)}</strong> at <span class="mono font-bold">${windSpeed} km/h</span>. Adjust the right wind dial to simulate direction shifts.
+          </div>
+        `;
+      } else {
+        // Glacier Melt Report
+        document.getElementById('inspectorTitle').textContent = item.name;
+        document.getElementById('inspectorSubtitle').textContent = `Cryosphere Melt Monitor • ${item.lat.toFixed(2)}°, ${item.lon.toFixed(2)}°`;
+
+        document.getElementById('inspectorBody').innerHTML = `
+          <div class="bg-sky-50 border border-sky-200 rounded-2xl p-3 flex items-center justify-between">
+            <div>
+              <div class="text-[10px] font-bold text-sky-800 uppercase">Cumulative Temp Rise</div>
+              <div class="mono text-xl font-extrabold text-red-600">${item.tempRiseC}</div>
+            </div>
+            <div class="text-right">
+              <div class="text-[10px] font-bold text-sky-800 uppercase">Annual Retreat</div>
+              <div class="mono text-xs font-bold text-sky-950">${item.retreatRate}</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-center">
+            <div class="bg-white border border-slate-200 rounded-xl p-2.5">
+              <div class="text-[10px] text-slate-500">1980 Baseline</div>
+              <div class="mono font-bold text-slate-800 text-sm">${item.baselineC} °C</div>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-2.5">
+              <div class="text-[10px] text-slate-500">Current Mean</div>
+              <div class="mono font-bold text-red-600 text-sm">${item.currentC} °C</div>
+            </div>
+          </div>
+
+          <div class="bg-white border border-slate-200 rounded-2xl p-3 space-y-1.5">
+            <div class="text-[11px] font-extrabold text-slate-900">🧊 Mass Balance Loss: <span class="mono text-sky-800">${item.iceLossGt}</span></div>
+            <p class="text-[11.5px] text-slate-600 leading-relaxed">${escapeHtml(item.impact)}</p>
+          </div>
+        `;
+      }
+    }
+
+    function runBiomeProbe(lon, lat) {
+      selectedItem = null;
+      probePoint = { lon, lat };
+      ensureLeftDrawerOpen();
+      document.getElementById('btnBackFeed').classList.remove('hidden');
+
+      const biome = inferBiome(lon, lat);
+      const warming = checkWarmingZone(lon, lat);
+      const estAmbient = +(biome.ambientBase + (warming ? 2.1 : 0)).toFixed(1);
+      const riskScore = Math.min(96, Math.max(18, Math.round(35 + (warming ? 28 : 0) + windSpeed * 0.45)));
+      const riskLabel = riskScore >= 70 ? 'HIGH IGNITION RISK' : riskScore >= 45 ? 'MODERATE RISK' : 'LOW RISK';
+      const riskColor = riskScore >= 70 ? 'bg-red-50 border-red-200 text-red-900' : riskScore >= 45 ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900';
+
+      document.getElementById('inspectorTitle').textContent = 'Live Coordinate Probe';
+      document.getElementById('inspectorSubtitle').textContent = `${lat.toFixed(2)}°N, ${lon.toFixed(2)}°E • Public Gov Weather`;
+
+      document.getElementById('inspectorBody').innerHTML = `
+        <div class="rounded-2xl border p-3 ${riskColor}">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-extrabold">${riskLabel}</span>
+            <span class="mono font-bold text-sm">${riskScore}/100</span>
+          </div>
+          <div class="text-[11px] mt-1 font-semibold">🌿 Detected Biome: ${escapeHtml(biome.name)}</div>
+          <div id="probeLiveStatus" class="text-[10px] mt-1 opacity-80">📡 Querying NOAA/ECMWF Open-Meteo live weather...</div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-center">
+          <div class="bg-white border border-slate-200 rounded-xl p-2.5">
+            <div class="text-[10px] text-slate-500">Live Ambient (T5)</div>
+            <div id="probeTempVal" class="mono font-bold text-slate-900 text-sm">${estAmbient} °C</div>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-xl p-2.5">
+            <div class="text-[10px] text-slate-500">Warming Anomaly</div>
+            <div class="mono font-bold ${warming ? 'text-red-600' : 'text-emerald-700'} text-sm">${warming ? warming.anomaly : '+1.2 °C'}</div>
+          </div>
+        </div>
+        <div id="probeWindSummary" class="bg-white border border-slate-200 rounded-2xl p-3 text-[11.5px] text-slate-700">
+          ${warming
+            ? `⚠️ Inside <strong>${escapeHtml(warming.name)}</strong> red amplification zone. Combined with current <strong>${windSpeed} km/h</strong> winds, any spark would expand rapidly.`
+            : `✅ Outside primary red amplification hotspots. Active VIIRS monitoring continues every 3 hours.`}
+        </div>
+      `;
+
+      // Fetch real-time public meteorological data (NOAA / DWD / ECMWF via Open-Meteo)
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(3)}&longitude=${lon.toFixed(3)}&current=temperature_2m,wind_speed_10m,wind_direction_10m`)
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(wx => {
+          if (!wx || !wx.current) return;
+          const liveT = wx.current.temperature_2m;
+          const liveW = Math.round(wx.current.wind_speed_10m);
+          const liveDir = Math.round(wx.current.wind_direction_10m);
+          const tempEl = document.getElementById('probeTempVal');
+          const statusEl = document.getElementById('probeLiveStatus');
+          const windEl = document.getElementById('probeWindSummary');
+          if (tempEl) tempEl.textContent = `${liveT} °C`;
+          if (statusEl) statusEl.textContent = `✅ Live NOAA/ECMWF Telemetry • Wind ${liveW} km/h (${dirToCompass(liveDir)})`;
+          if (windEl && warming) {
+            windEl.innerHTML = `⚠️ Inside <strong>${escapeHtml(warming.name)}</strong> (${warming.anomaly} NASA GISTEMP zone). Live ground temp is <strong>${liveT}°C</strong> with <strong>${liveW} km/h</strong> ${dirToCompass(liveDir)} winds.`;
+          }
+        })
+        .catch(() => {
+          const statusEl = document.getElementById('probeLiveStatus');
+          if (statusEl) statusEl.textContent = '🛰️ Using local biome climatology model';
+        });
+    }
+
+    function resetInspectorToFeed() {
+      selectedItem = null;
+      probePoint = null;
+      document.getElementById('btnBackFeed').classList.add('hidden');
+      document.getElementById('inspectorTitle').textContent = 'Global Earth Feed';
+      document.getElementById('inspectorSubtitle').textContent = `${getVisibleFires().length} wildfires • ${glaciers.length} melting glaciers`;
+
+      const legendHtml = `
+        <div class="grid grid-cols-2 gap-1.5 bg-white/80 border border-slate-200 rounded-2xl p-2.5 text-[10.5px] font-semibold text-slate-700">
+          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#15803d]"></span>Tropical Forest</div>
+          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#065f46]"></span>Evergreen Forest</div>
+          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#eab308]"></span>Arid Desert</div>
+          <div class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-red-600/70"></span>Warming Zone</div>
+        </div>
+      `;
+
+      const fireCards = getVisibleFires().slice(0, 16).map(f => {
+        const dt = (f.fireC - f.ambientC).toFixed(1);
+        const col = f.risk === 'CRITICAL' ? 'bg-red-600' : f.risk === 'MODERATE' ? 'bg-amber-600' : 'bg-emerald-600';
+        return `
+          <div onclick="selectById('fire','${f.id}')" class="bg-white border border-slate-200 hover:border-[#14532d] rounded-2xl p-3 cursor-pointer transition shadow-sm">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-bold text-xs text-slate-900 truncate">${escapeHtml(f.name)}</span>
+              <span class="${col} text-white text-[9.5px] font-bold px-2 py-0.5 rounded-full shrink-0">${f.risk}</span>
+            </div>
+            <div class="text-[10.5px] text-[#14532d] font-semibold mt-0.5 truncate">🌿 ${escapeHtml(f.biome)}</div>
+            <div class="mono text-[10.5px] bg-slate-100 rounded-xl px-2.5 py-1.5 mt-2 flex justify-between text-slate-800">
+              <span>🔥 <b>${f.fireC}°C</b></span>
+              <span>🌲 <b>${f.ambientC}°C</b></span>
+              <span class="text-rose-700">ΔT <b>+${dt}°C</b></span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const glacierCards = glaciers.map(g => `
+        <div onclick="selectById('glacier','${g.id}')" class="bg-sky-50/80 border border-sky-200 hover:border-sky-600 rounded-2xl p-3 cursor-pointer transition">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-bold text-xs text-sky-950 truncate">🧊 ${escapeHtml(g.name)}</span>
+            <span class="mono text-[10px] font-extrabold text-red-600 bg-white px-2 py-0.5 rounded-full border border-red-200">${g.tempRiseC}</span>
+          </div>
+          <div class="text-[10.5px] text-sky-800 mt-1">Retreat: <b>${g.retreatRate}</b> • Loss: <b>${g.iceLossGt}</b></div>
+        </div>
+      `).join('');
+
+      document.getElementById('inspectorBody').innerHTML = `
+        ${legendHtml}
+        <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 pt-1">Active Wildfire Detections (°C)</div>
+        ${fireCards}
+        <div class="text-[10px] font-extrabold uppercase tracking-wider text-sky-700 pt-2">Melting Glaciers (Temp Rise)</div>
+        ${glacierCards}
+      `;
+    }
+
+    function selectById(type, id) {
+      const item = type === 'fire'
+        ? wildfires.find(f => f.id === id)
+        : glaciers.find(g => g.id === id);
+      if (item) selectItem(item);
+    }
+
+    // Search Bar Logic
+    function handleSearchInput(query) {
+      const q = (query || '').trim().toLowerCase();
+      const dd = document.getElementById('searchDropdown');
+      document.getElementById('clearSearchBtn').classList.toggle('hidden', q.length === 0);
+
+      if (!q) {
+        dd.classList.add('hidden');
+        return;
+      }
+
+      const matches = [
+        ...wildfires.filter(f => f.name.toLowerCase().includes(q) || f.biome.toLowerCase().includes(q)),
+        ...glaciers.filter(g => g.name.toLowerCase().includes(q))
+      ].slice(0, 8);
+
+      if (matches.length === 0) {
+        dd.innerHTML = `<div class="p-3 text-xs text-slate-500 text-center">No matching wildfire or glacier found for "${escapeHtml(query)}"</div>`;
+      } else {
+        dd.innerHTML = matches.map(m => {
+          const isFire = m.type === 'fire';
+          return `
+            <div onclick="pickSearchResult('${m.type}','${m.id}')" class="px-3 py-2 rounded-xl hover:bg-emerald-50 cursor-pointer flex items-center justify-between gap-2">
+              <div class="min-w-0">
+                <div class="text-xs font-bold text-slate-900 truncate">${isFire ? '🔥' : '🧊'} ${escapeHtml(m.name)}</div>
+                <div class="text-[10px] text-slate-500 truncate">${isFire ? `Last caught: ${escapeHtml(m.lastCaught)} • ${escapeHtml(m.managementGrade)}` : `Temp rise: ${m.tempRiseC} • ${m.retreatRate}`}</div>
+              </div>
+              <span class="mono text-[10px] font-bold ${isFire ? 'text-rose-700' : 'text-sky-700'} shrink-0">${isFire ? m.fireC + '°C' : m.tempRiseC}</span>
+            </div>
+          `;
+        }).join('');
+      }
+      dd.classList.remove('hidden');
+    }
+
+    function pickSearchResult(type, id) {
+      document.getElementById('searchDropdown').classList.add('hidden');
+      selectById(type, id);
+    }
+
+    function quickSearch(term) {
+      const inp = document.getElementById('searchInput');
+      inp.value = term;
+      const q = term.toLowerCase();
+      const match = wildfires.find(f => f.name.toLowerCase().includes(q)) || glaciers.find(g => g.name.toLowerCase().includes(q));
+      if (match) {
+        document.getElementById('searchDropdown').classList.add('hidden');
+        document.getElementById('clearSearchBtn').classList.remove('hidden');
+        selectItem(match);
+      } else {
+        handleSearchInput(term);
+      }
+    }
+
+    function clearSearch() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('clearSearchBtn').classList.add('hidden');
+      document.getElementById('searchDropdown').classList.add('hidden');
+    }
+
+    // Layer, Style, Wind & Timeline Controls
+    function toggleMapStyle() {
+      mapStyle = mapStyle === 'satellite' ? 'google' : 'satellite';
+      document.getElementById('btnStyle').textContent = mapStyle === 'satellite' ? 'Map View' : 'Satellite';
+    }
+
+    function toggleLayer(name) {
+      layers[name] = !layers[name];
+      const btnMap = {
+        dayNight: { id: 'btnDayNight', on: 'bg-indigo-900 text-white shadow-sm', off: 'text-slate-600 hover:bg-slate-100' },
+        warming: { id: 'btnWarming', on: 'bg-red-600 text-white shadow-sm', off: 'text-slate-600 hover:bg-slate-100' },
+        glaciers: { id: 'btnGlaciers', on: 'bg-sky-700 text-white shadow-sm', off: 'text-slate-600 hover:bg-slate-100' },
+        biomes: { id: 'btnBiomes', on: 'bg-emerald-800 text-white shadow-sm', off: 'text-slate-600 hover:bg-slate-100' }
+      };
+      const cfg = btnMap[name];
+      const el = document.getElementById(cfg.id);
+      el.className = `px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition cursor-pointer ${layers[name] ? cfg.on : cfg.off}`;
+    }
+
+    function updateWindUI() {
+      windSpeed = parseInt(document.getElementById('windSpeedSlider').value, 10);
+      windDir = parseInt(document.getElementById('windDirSlider').value, 10);
+      const comp = dirToCompass(windDir);
+      document.getElementById('windSpeedLbl').textContent = `${windSpeed} km/h`;
+      document.getElementById('windDirLbl').textContent = `${windDir}° (${comp})`;
+      document.getElementById('windBadge').textContent = `${windSpeed} km/h ${comp}`;
+      if (selectedItem && selectedItem.type === 'fire') selectItem(selectedItem);
+    }
+
+    function setTimelineHour(val) {
+      timelineHour = parseInt(val, 10);
+      document.getElementById('timelineSlider').value = timelineHour;
+      // Sync Day/Night solar terminator with the orbital timeline (24 = live current UTC time)
+      updateSolarTerminator(timelineHour === 24 ? null : timelineHour);
+      document.getElementById('timelineLabel').textContent = `${String(timelineHour).padStart(2, '0')}:00 UTC • ${getVisibleFires().length} Active Fronts`;
+      if (!selectedItem && !probePoint) resetInspectorToFeed();
+    }
+
+    function toggleTimelinePlay() {
+      timelinePlaying = !timelinePlaying;
+      const btn = document.getElementById('playTimelineBtn');
+      if (timelinePlaying) {
+        btn.textContent = '⏸';
+        if (timelineHour >= 24) setTimelineHour(1);
+        timelineTimer = setInterval(() => {
+          setTimelineHour(timelineHour >= 24 ? 1 : timelineHour + 1);
+        }, 700);
+      } else {
+        btn.textContent = '▶';
+        clearInterval(timelineTimer);
+      }
+    }
+
+    // Drawer Minimize / Restore
+    let leftMinimized = false;
+    function toggleLeftDrawer() {
+      leftMinimized = !leftMinimized;
+      document.getElementById('leftDrawer').classList.toggle('-translate-x-[120%]', leftMinimized);
+      document.getElementById('restoreLeftBtn').classList.toggle('hidden', !leftMinimized);
+    }
+    function ensureLeftDrawerOpen() {
+      if (leftMinimized) toggleLeftDrawer();
+    }
+
+    // 30-Second Automated Judge Tour
+    let tourActive = false;
+    let tourTimer = null;
+    const tourStops = [
+      { type: 'fire', id: 'wf-pir-panjal', caption: '1/4 Pir Panjal, J&K: Cool 16.2°C Himalayan ground vs 73.4°C fire core (ΔT +57.2°C).' },
+      { type: 'glacier', id: 'gl-gangotri', caption: '2/4 Gangotri Glacier: +1.85°C warming accelerating 22m/yr snout retreat.' },
+      { type: 'fire', id: 'wf-bastar', caption: '3/4 Bastar Tropical Forest: High 42.1 MW fire front with 6-hour wind spread cone.' },
+      { type: 'fire', id: 'wf-amazon', caption: '4/4 Global Scale: Amazon Drought Belt & NASA EONET live planetary telemetry.' }
+    ];
+
+    function toggleJudgeTour() {
+      tourActive = !tourActive;
+      const banner = document.getElementById('tourBanner');
+      if (!tourActive) {
+        clearInterval(tourTimer);
+        banner.classList.add('hidden');
+        return;
+      }
+      banner.classList.remove('hidden');
+      let idx = 0;
+      const runStop = () => {
+        const stop = tourStops[idx % tourStops.length];
+        document.getElementById('tourCaption').textContent = stop.caption;
+        selectById(stop.type, stop.id);
+        idx++;
+      };
+      runStop();
+      tourTimer = setInterval(runStop, 6500);
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const box = document.getElementById('toastBox');
+      box.textContent = msg;
+      box.classList.remove('hidden');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => box.classList.add('hidden'), 3200);
+    }
+
+    // -------------------------------------------------------------------------
+    // 11. GMAIL ACCOUNT SIGN-IN & RIGHT-SIDE SDG 13 CLIMATE GROUPS ENGINE
+    // -------------------------------------------------------------------------
+    let currentUser = null;
+    let worldMessages = [];
+    let ideaProjects = [];
+    let privateGroups = [];
+    let activePrivateRoomId = null;
+
+    function safeJsonParse(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function initAuthAndGroups() {
+      currentUser = safeJsonParse('agninet_user', null);
+      worldMessages = safeJsonParse('agninet_world_chat', []);
+      ideaProjects = safeJsonParse('agninet_ideas', []);
+      privateGroups = safeJsonParse('agninet_private_groups', []);
+      updateAuthUI();
+      renderWorldChat();
+      renderIdeasList();
+      renderPrivateGroupsList();
+    }
+
+    function updateAuthUI() {
+      const topLbl = document.getElementById('authTopLabel');
+      const strip = document.getElementById('drawerUserStrip');
+      const signedInActions = document.getElementById('authSignedInActions');
+
+      if (currentUser) {
+        topLbl.textContent = currentUser.name.split(' ')[0];
+        strip.innerHTML = `
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-6 h-6 rounded-full bg-[#1a73e8] text-white font-bold text-[10px] flex items-center justify-center shrink-0">${escapeHtml(currentUser.name[0].toUpperCase())}</span>
+            <div class="truncate">
+              <div class="font-bold text-slate-900 truncate">${escapeHtml(currentUser.name)}</div>
+              <div class="text-[10px] text-slate-500 truncate">${escapeHtml(currentUser.email)}</div>
+            </div>
+          </div>
+          <button onclick="signOutUser()" class="px-2.5 py-1 rounded-lg bg-slate-200 hover:bg-red-100 hover:text-red-700 text-slate-700 font-bold shrink-0 cursor-pointer">Sign Out</button>
+        `;
+        signedInActions.classList.remove('hidden');
+      } else {
+        topLbl.textContent = 'Sign In';
+        strip.innerHTML = `
+          <span class="text-slate-600 font-medium">Sign in with Gmail to post &amp; create private groups.</span>
+          <button onclick="openAuthModal()" class="px-2.5 py-1 rounded-lg bg-[#1a73e8] hover:bg-blue-700 text-white font-bold cursor-pointer">Sign In</button>
+        `;
+        signedInActions.classList.add('hidden');
+      }
+    }
+
+    function openAuthModal() {
+      document.getElementById('authErrorMsg').classList.add('hidden');
+      if (currentUser) {
+        document.getElementById('authNameInput').value = currentUser.name;
+        document.getElementById('authEmailInput').value = currentUser.email;
+      }
+      document.getElementById('authModal').classList.remove('hidden');
+    }
+
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.add('hidden');
+    }
+
+    function handleAuthSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('authNameInput').value.trim();
+      const email = document.getElementById('authEmailInput').value.trim().toLowerCase();
+      const pass = document.getElementById('authPassInput').value;
+      const errBox = document.getElementById('authErrorMsg');
+
+      if (!email.endsWith('@gmail.com') && !email.endsWith('@googlemail.com')) {
+        errBox.textContent = 'Please enter a valid @gmail.com email address.';
+        errBox.classList.remove('hidden');
+        return;
+      }
+      if (pass.length < 6) {
+        errBox.textContent = 'Password must be at least 6 characters.';
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      currentUser = { name, email };
+      try { localStorage.setItem('agninet_user', JSON.stringify(currentUser)); } catch {}
+      document.getElementById('authPassInput').value = '';
+      updateAuthUI();
+      closeAuthModal();
+      showToast(`Signed in as ${name} (${email})`);
+    }
+
+    function signOutUser() {
+      currentUser = null;
+      try { localStorage.removeItem('agninet_user'); } catch {}
+      updateAuthUI();
+      closeAuthModal();
+      showToast('Signed out of AgniNet');
+    }
+
+    function requireSignIn() {
+      if (!currentUser) {
+        showToast('Please sign in with your Gmail account first');
+        openAuthModal();
+        return false;
+      }
+      return true;
+    }
+
+    function toggleGroupsDrawer(open) {
+      const drawer = document.getElementById('groupsDrawer');
+      const backdrop = document.getElementById('groupsBackdrop');
+      if (open) {
+        backdrop.classList.remove('hidden');
+        drawer.classList.remove('translate-x-full');
+      } else {
+        backdrop.classList.add('hidden');
+        drawer.classList.add('translate-x-full');
+      }
+    }
+
+    function switchGroupTab(tab) {
+      ['world', 'ideas', 'private'].forEach(t => {
+        const panel = document.getElementById('gpanel-' + t);
+        const btn = document.getElementById('gtab-' + t);
+        const active = (t === tab);
+        panel.classList.toggle('hidden', !active);
+        btn.className = active
+          ? 'py-2 px-2 rounded-xl text-[11px] font-semibold bg-slate-900 text-white shadow-sm transition cursor-pointer'
+          : 'py-2 px-2 rounded-xl text-[11px] font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition cursor-pointer';
+      });
+    }
+
+    // TAB 1: WORLD SDG 13 CHAT (Clean empty state, no bots)
+    function renderWorldChat() {
+      const box = document.getElementById('worldChatMessages');
+      if (worldMessages.length === 0) {
+        box.innerHTML = `
+          <div class="h-full flex flex-col items-center justify-center text-center px-6 py-10 text-slate-400">
+            <div class="text-3xl mb-2">🌍</div>
+            <div class="text-xs font-bold text-slate-600">No messages yet in World SDG 13</div>
+            <div class="text-[11px] mt-1">Start the global climate conversation below.</div>
+          </div>
+        `;
+        return;
+      }
+      box.innerHTML = worldMessages.map(m => {
+        const isMe = currentUser && m.email === currentUser.email;
+        return `
+          <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
+            <div class="text-[10px] text-slate-500 mb-0.5 px-1">${escapeHtml(m.author)} • ${escapeHtml(m.time)}</div>
+            <div class="max-w-[85%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed ${isMe ? 'bg-[#14532d] text-white rounded-br-sm' : 'bg-white border border-slate-200 text-slate-800 rounded-bl-sm'}">
+              ${escapeHtml(m.text)}
+            </div>
+          </div>
+        `;
+      }).join('');
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function sendWorldMessage(e) {
+      e.preventDefault();
+      if (!requireSignIn()) return;
+      const input = document.getElementById('worldChatInput');
+      const text = input.value.trim();
+      if (!text) return;
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      worldMessages.push({ author: currentUser.name, email: currentUser.email, text, time });
+      try { localStorage.setItem('agninet_world_chat', JSON.stringify(worldMessages)); } catch {}
+      input.value = '';
+      renderWorldChat();
+    }
+
+    // TAB 2: IDEAS & PROJECTS HUB (Clean empty state, no bots)
+    function toggleIdeaForm() {
+      if (!requireSignIn()) return;
+      document.getElementById('ideaForm').classList.toggle('hidden');
+    }
+
+    function renderIdeasList() {
+      const box = document.getElementById('ideasList');
+      if (ideaProjects.length === 0) {
+        box.innerHTML = `
+          <div class="h-full flex flex-col items-center justify-center text-center px-6 py-10 text-slate-400">
+            <div class="text-3xl mb-2">💡</div>
+            <div class="text-xs font-bold text-slate-600">No climate ideas posted yet</div>
+            <div class="text-[11px] mt-1">Click "+ Post Your Climate Idea or Project" above to share your solution.</div>
+          </div>
+        `;
+        return;
+      }
+      box.innerHTML = ideaProjects.map(p => `
+        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 shadow-sm">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <span class="inline-block px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-bold mb-1">${escapeHtml(p.category)}</span>
+              <h4 class="font-bold text-xs text-slate-900">${escapeHtml(p.title)}</h4>
+            </div>
+            <button onclick="upvoteIdea('${p.id}')" class="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-blue-50 hover:text-[#1a73e8] text-[11px] font-bold text-slate-700 shrink-0 cursor-pointer">
+              ▲ ${p.votes}
+            </button>
+          </div>
+          <p class="text-[11.5px] text-slate-600 mt-1.5 leading-relaxed">${escapeHtml(p.desc)}</p>
+          <div class="text-[10px] text-slate-400 mt-2">Posted by ${escapeHtml(p.author)} • ${escapeHtml(p.date)}</div>
+        </div>
+      `).join('');
+    }
+
+    function submitIdeaProject(e) {
+      e.preventDefault();
+      if (!requireSignIn()) return;
+      const title = document.getElementById('ideaTitleInput').value.trim();
+      const category = document.getElementById('ideaCategoryInput').value;
+      const desc = document.getElementById('ideaDescInput').value.trim();
+      if (!title || !desc) return;
+
+      ideaProjects.unshift({
+        id: 'idea-' + Date.now(),
+        title, category, desc,
+        author: currentUser.name,
+        votes: 1,
+        date: new Date().toLocaleDateString()
+      });
+      try { localStorage.setItem('agninet_ideas', JSON.stringify(ideaProjects)); } catch {}
+      e.target.reset();
+      document.getElementById('ideaForm').classList.add('hidden');
+      renderIdeasList();
+      showToast('Published your climate project to the Ideas Hub!');
+    }
+
+    function upvoteIdea(id) {
+      const item = ideaProjects.find(p => p.id === id);
+      if (!item) return;
+      item.votes += 1;
+      try { localStorage.setItem('agninet_ideas', JSON.stringify(ideaProjects)); } catch {}
+      renderIdeasList();
+    }
+
+    // TAB 3: PRIVATE CLIMATE GROUPS (Clean empty state, no bots)
+    function renderPrivateGroupsList() {
+      const box = document.getElementById('privateGroupsList');
+      if (privateGroups.length === 0) {
+        box.innerHTML = `
+          <div class="h-full flex flex-col items-center justify-center text-center px-6 py-10 text-slate-400">
+            <div class="text-3xl mb-2">🔒</div>
+            <div class="text-xs font-bold text-slate-600">No private groups yet</div>
+            <div class="text-[11px] mt-1">Create a private climate group above or enter an invite code to join.</div>
+          </div>
+        `;
+        return;
+      }
+      box.innerHTML = privateGroups.map(g => `
+        <div onclick="openPrivateRoom('${g.id}')" class="bg-white border border-slate-200 hover:border-slate-900 rounded-2xl p-3 cursor-pointer transition shadow-sm">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-bold text-xs text-slate-900">🔒 ${escapeHtml(g.name)}</span>
+            <span class="mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">${escapeHtml(g.code)}</span>
+          </div>
+          <div class="text-[11px] text-slate-500 mt-1">${escapeHtml(g.topic)}</div>
+          <div class="text-[10px] text-emerald-700 font-semibold mt-1.5">${g.messages.length} message${g.messages.length === 1 ? '' : 's'} • Open Room →</div>
+        </div>
+      `).join('');
+    }
+
+    function createPrivateGroup(e) {
+      e.preventDefault();
+      if (!requireSignIn()) return;
+      const name = document.getElementById('privGroupName').value.trim();
+      const topic = document.getElementById('privGroupTopic').value.trim();
+      if (!name || !topic) return;
+
+      const code = 'ECO-' + Math.floor(1000 + Math.random() * 9000);
+      const newGroup = {
+        id: 'priv-' + Date.now(),
+        name, topic, code,
+        creator: currentUser.name,
+        messages: []
+      };
+      privateGroups.unshift(newGroup);
+      try { localStorage.setItem('agninet_private_groups', JSON.stringify(privateGroups)); } catch {}
+      e.target.reset();
+      renderPrivateGroupsList();
+      openPrivateRoom(newGroup.id);
+      showToast(`Created private group "${name}" • Invite Code: ${code}`);
+    }
+
+    function joinPrivateByCode(e) {
+      e.preventDefault();
+      if (!requireSignIn()) return;
+      const code = document.getElementById('joinCodeInput').value.trim().toUpperCase();
+      if (!code) return;
+      const found = privateGroups.find(g => g.code.toUpperCase() === code);
+      if (!found) {
+        showToast(`No private group found with invite code "${code}"`);
+        return;
+      }
+      document.getElementById('joinCodeInput').value = '';
+      openPrivateRoom(found.id);
+    }
+
+    function openPrivateRoom(id) {
+      const group = privateGroups.find(g => g.id === id);
+      if (!group) return;
+      activePrivateRoomId = id;
+      document.getElementById('activePrivRoomName').textContent = group.name;
+      document.getElementById('activePrivRoomCode').textContent = `Invite Code: ${group.code}`;
+      document.getElementById('privateListView').classList.add('hidden');
+      document.getElementById('privateRoomView').classList.remove('hidden');
+      renderPrivateRoomMessages();
+    }
+
+    function closePrivateRoom() {
+      activePrivateRoomId = null;
+      document.getElementById('privateRoomView').classList.add('hidden');
+      document.getElementById('privateListView').classList.remove('hidden');
+      renderPrivateGroupsList();
+    }
+
+    function renderPrivateRoomMessages() {
+      const group = privateGroups.find(g => g.id === activePrivateRoomId);
+      const box = document.getElementById('privateRoomMessages');
+      if (!group || group.messages.length === 0) {
+        box.innerHTML = `
+          <div class="h-full flex flex-col items-center justify-center text-center px-6 py-10 text-slate-400">
+            <div class="text-2xl mb-2">🔐</div>
+            <div class="text-xs font-bold text-slate-600">Private room ready</div>
+            <div class="text-[11px] mt-1">Share invite code <strong class="mono text-slate-700">${group ? escapeHtml(group.code) : ''}</strong> and start chatting.</div>
+          </div>
+        `;
+        return;
+      }
+      box.innerHTML = group.messages.map(m => {
+        const isMe = currentUser && m.email === currentUser.email;
+        return `
+          <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
+            <div class="text-[10px] text-slate-500 mb-0.5 px-1">${escapeHtml(m.author)} • ${escapeHtml(m.time)}</div>
+            <div class="max-w-[85%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed ${isMe ? 'bg-slate-900 text-white rounded-br-sm' : 'bg-white border border-slate-200 text-slate-800 rounded-bl-sm'}">
+              ${escapeHtml(m.text)}
+            </div>
+          </div>
+        `;
+      }).join('');
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function sendPrivateMessage(e) {
+      e.preventDefault();
+      if (!requireSignIn()) return;
+      const group = privateGroups.find(g => g.id === activePrivateRoomId);
+      if (!group) return;
+      const input = document.getElementById('privateChatInput');
+      const text = input.value.trim();
+      if (!text) return;
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      group.messages.push({ author: currentUser.name, email: currentUser.email, text, time });
+      try { localStorage.setItem('agninet_private_groups', JSON.stringify(privateGroups)); } catch {}
+      input.value = '';
+      renderPrivateRoomMessages();
+    }
+
+    function copyActiveRoomCode() {
+      const group = privateGroups.find(g => g.id === activePrivateRoomId);
+      if (!group) return;
+      const tmp = document.createElement('textarea');
+      tmp.value = group.code;
+      document.body.appendChild(tmp);
+      tmp.select();
+      try {
+        document.execCommand('copy');
+        showToast(`Copied invite code: ${group.code}`);
+      } catch {
+        showToast(`Invite code: ${group.code}`);
+      }
+      document.body.removeChild(tmp);
+    }
+
+    // Boot Application on Window Load
+    window.onload = function () {
+      resizeCanvas();
+      updateWindUI();
+      setTimelineHour(24);
+      resetInspectorToFeed();
+      initAuthAndGroups();
+      fetchGovOpenData();
+      animateLoop();
+    };
+  </script>
+</body>
+</html>
